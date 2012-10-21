@@ -1,14 +1,11 @@
-
 set -e
+# rm -fv META
+oasis setup
+ocaml setup.ml -all
 
-name='qtest'
-target=$name.native
-
-# -classic-display -use-menhir
-# ocamlbuild -I +threads -cflag -thread -libs unix,str,threads $target && ./$target $@
-# ocamlbuild -use-ocamlfind -pkg threads -pkg threads -cflag -thread -libs unix,str $target && ./$target $@
-# -use-menhir -yaccflags --trace,--explain,--dump
-ocamlbuild  -libs unix,str $target && ./$target $@
-
-cp $target ~/bin/$name -v
-
+if [ "$1" = "install" ]
+then
+  echo INSTALLATION
+  sudo ocamlfind remove QTest2Lib
+  sudo ocaml setup.ml -install
+fi
