@@ -1,0 +1,11 @@
+*.cmi
+*.cmx
+*.cmo
+*.byte
+*.opt
+*.log
+*.a
+*.cma
+*.cmxa
+qtest
+qtest.ml
