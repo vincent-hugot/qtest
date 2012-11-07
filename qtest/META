@@ -1,0 +1,6 @@
+name="qtest"
+description = "QTest, the testing framwork of choice"
+version = "2.0beta2"
+requires = "unix,oUnit,str"
+archive(byte) = "qTest2Lib.cma"
+archive(native) = "qTest2Lib.cmxa"
