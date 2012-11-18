@@ -1,4 +1,4 @@
-
+#!/usr/bin/env ocaml
 (* installation etc *)
 
 open List open Sys
@@ -34,4 +34,6 @@ let main = match tl al with
   | ["remove"] -> remove_qtest ""   | ["remove";p] -> remove_qtest p
   | _ -> assert false
   )
-| _ -> assert false
+| _ ->
+  pl "usage: qtest {build,install,remove} [prefix]";
+  failwith "bad command line"
