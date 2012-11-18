@@ -31,7 +31,7 @@ Execute one of:
 
 OASIS will be used as backend.
     
-## Future Works
+## Future works
 
 There are ideas floating around on how to improve qTest2, generally revolving
 around going from a test "extraction" to an "annotation" model. The new version
@@ -42,6 +42,21 @@ All ideas, included (and especially!) crazy ones, are welcome at this stage,
 and backwards compatibility with qtest2 is not a consideration.
 
 
+## History of the project
+
+(or at least, what I (VH) can unearth of it thanks to git logs)
+
+ * 2007--2008  : Ilmari Heikkinen writes _make_suite.rb_ for his Prelude.ml.
+ * Jan 17, 2011: _make_suite.rb_ is copied into Batteries. (=qtest0)
+ * Jan 27, 2011: Kaustuv Chaudhuri writes from scratch
+   an equivalent _make_suite.mll_ to replace the Ruby script. (=qtest1)
+ * Jan 19, 2012: Vincent Hugot writes from scratch a new version, with a lot
+   of new features. Syntax changes a bit.  (=qtest2)
+ * Oct 21, 2012: qtest2 moves to its own repository.
+
+Over time, the various versions of qtest have received additional contributions by:
+Eric Norige, Gabriel Scherer, Cedric Cellier, Valentin Gatien-Baron and Max Mouratov.
+ 
 ## Contact
 
 The issues system of github seems the sanest way for now.
