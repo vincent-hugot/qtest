@@ -21,6 +21,16 @@ qTest2 relies on oUnit to provide the underlying testing framework.
 
 Backwards-incompatible changes are unlikely to be considered.
 
+### Building, installing, un-installing
+
+Execute one of:
+
+    ocaml do.ml qtest build   [prefix]
+    ocaml do.ml qtest install [prefix]
+    ocaml do.ml qtest remove  [prefix]
+
+OASIS will be used as backend.
+    
 ## Future Works
 
 There are ideas floating around on how to improve qTest2, generally revolving
