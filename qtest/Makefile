@@ -13,9 +13,9 @@ REQUIRES = oUnit str
 .SUFFIXES: .mll .mly .ml .mli .cmo .cmi .cmx .opt .byte
 .PHONY: opt clean install uninstall reinstall doc dep
 
-all: qtest qTest2Lib.cma qTest2Lib.cmxa
+all: qtest QTest2Lib.cma QTest2Lib.cmxa
 
-install: qtest quickcheck.cmi runner.cmi qTest2Lib.cma META
+install: qtest quickcheck.cmi runner.cmi QTest2Lib.cma META
 	ocamlfind install qtest $^
 uninstall:
 	ocamlfind remove qtest
@@ -59,10 +59,10 @@ quickcheck.cmx: quickcheck.cmi
 
 # Main targets
 
-qTest2Lib.cma: quickcheck.cmo runner.cmo
+QTest2Lib.cma: quickcheck.cmo runner.cmo
 	$(OCAMLC) -a -o $@ -package "$(REQUIRES)" -custom -linkpkg $(OCAMLFLAGS) $^
 
-qTest2Lib.cmxa: quickcheck.cmx runner.cmx
+QTest2Lib.cmxa: quickcheck.cmx runner.cmx
 	$(OCAMLOPT) -a -o $@ -package "$(REQUIRES)" $(OCAMLOPTFLAGS) $^
 
 qtest.byte: misclex.cmo core.cmo qparse.cmo qtest.cmo
