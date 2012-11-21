@@ -35,5 +35,5 @@ let main = match tl al with
   | _ -> assert false
   )
 | _ ->
-  pl "usage: qtest {build,install,remove} [prefix]";
+  pl "usage: ./do.ml qtest {build,install,remove} [prefix]";
   failwith "bad command line"
