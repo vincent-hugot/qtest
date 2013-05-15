@@ -219,7 +219,7 @@ let generate paths =
   suite := List.rev !suite; (* correct order (suite is built in reverse order) *)
   if !_shuffle then Shuffle.exec suite;
   listiteri process (preprocess !suite);
-  out "let () = ignore (Runner.run (\"\" >::: List.rev !___tests))\n";
+  out "exit (Runner.run (\"\" >::: List.rev !___tests))\n";
   eps "Done.\n"
 
 (** Parse command line *)
