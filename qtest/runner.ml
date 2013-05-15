@@ -72,7 +72,7 @@ let run test =
   in
   ps "Running tests...";
   let running_time, results = time_fun perform_test hdl_event test in
-  let (_s, _f, o) = !_counter in
+  let (_s, f, o) = !_counter in
   let failures = List.filter not_success results in
 (*  assert (List.length failures = f);*)
   ps "\r";
@@ -81,8 +81,11 @@ let run test =
   pf "Ran: %d tests in: %.2f seconds.%s\n"
     total_tests running_time (String.make 40 ' ');
   if failures = [] then pl "SUCCESS";
-  if o <> 0 then
-    pl "WARNING! SOME TESTS ARE NEITHER SUCCESSES NOR FAILURES!"
+  if o <> 0 then pl "WARNING! SOME TESTS ARE NEITHER SUCCESSES NOR FAILURES!";
+  (* create a meaningful return code for the process running the tests *)
+  match f, o with
+    | 0, 0 -> 0
+    | _ -> 1
 
 (* TAP-compatible test runner, in case we want to use a test harness *)
 
