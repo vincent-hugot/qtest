@@ -50,6 +50,19 @@ let upos =
 
 let uig () = if Random.bool () then - upos () - 1 else upos ()
 
+let random_binary_string length =
+  (* 0b011101... *)
+  let s = String.create (length + 2) in
+  s.[0] <- '0';
+  s.[1] <- 'b';
+  for i = 0 to length - 1 do
+    s.[i+2] <- if Random.bool () then '0' else '1'
+  done;
+  s
+
+let ui32g () = Int32.of_string (random_binary_string 32)  
+let ui64g () = Int64.of_string (random_binary_string 64)
+
 let lg_size size gen () =
   foldn ~f:(fun acc _ -> (gen ())::acc) ~init:[] (size ())
 let lg gen () = lg_size nng gen ()
@@ -109,6 +122,9 @@ let int = (uig, string_of_int)
 let pos_int = (upos, string_of_int)
 let small_int = (nng, string_of_int)
 let neg_int = (neg_ig, string_of_int)
+  
+let int32 = (ui32g, fun i -> Int32.to_string i ^ "l")
+let int64 = (ui64g, fun i -> Int64.to_string i ^ "L")
 
 let char = (cg, sprintf "%C")
 let printable_char = (printable, sprintf "%C")
