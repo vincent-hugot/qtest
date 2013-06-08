@@ -28,6 +28,12 @@ val neg_float : float gen_print
 val int : int gen_print
 (** int generator. Uniformly distributed *)
 
+val int32 : int32 gen_print
+(** int32 generator. Uniformly distributed *)
+
+val int64 : int64 gen_print
+(** int generator. Uniformly distributed *)
+
 val pos_int : int gen_print
 (** positive int generator. Uniformly distributed *)
 
