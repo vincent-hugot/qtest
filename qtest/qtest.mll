@@ -276,6 +276,7 @@ let () =
   match List.rev !rev_anon_args with
     | [] -> pl "qtest: use --help for usage notes."
     | "extract" :: paths -> generate paths
-    | arg :: _ ->
-      failwith @@ "bad arg: " ^ arg
+    | arg :: _ -> 
+      Arg.usage options usage_msg; prerr_newline();
+      failwith @@ "bad argument: " ^ arg
 }
