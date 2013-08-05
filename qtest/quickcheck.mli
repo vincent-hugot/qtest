@@ -42,6 +42,10 @@ val small_int : int gen_print
     is roughly an exponentially decreasing function of the number.
 *)
 
+val small_int_corners : unit -> int gen_print
+(** As [small_int], but each newly created generator starts with
+ a list of corner cases before falling back on random generation. *)
+
 val neg_int : int gen_print
 (** negative int generator. The distribution is similar to that of
     [small_int], not of [pos_int].

@@ -98,6 +98,16 @@ let sg_size ?(gen = cg) size () =
   s
 let sg ?gen () = sg_size ?gen nng ()
 
+
+(* corner cases *)
+
+let graft_corners gen corners = 
+  let cors = ref corners in fun () ->
+    match !cors with [] -> gen ()
+    | e::l -> cors := l; e
+
+let nng_corners () = graft_corners nng [0;1;2;max_int]
+
 (* Additional pretty-printers *)
 
 let pp_list pp l = "[" ^ (String.concat "; " (List.map pp l)) ^ "]"
@@ -121,6 +131,7 @@ let neg_float = (nfg, string_of_float)
 let int = (uig, string_of_int)
 let pos_int = (upos, string_of_int)
 let small_int = (nng, string_of_int)
+let small_int_corners () = (nng_corners (), string_of_int)
 let neg_int = (neg_ig, string_of_int)
   
 let int32 = (ui32g, fun i -> Int32.to_string i ^ "l")

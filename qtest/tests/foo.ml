@@ -188,3 +188,8 @@ let strange_string = " \"
   & =
   2*3
 *)
+
+
+(*$Q even & ~count:10
+  (Q.small_int_corners ()) (fun n-> odd (abs n+3) = even (abs n))
+*)
