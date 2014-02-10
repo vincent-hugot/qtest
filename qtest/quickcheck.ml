@@ -14,10 +14,27 @@ let sum_int = List.fold_left (+) 0
 
 let (==>) b1 b2 = if b1 then b2 else true (* could use too => *)
 
+module Gen = struct
+  type 'a t = RS.t -> 'a
+
+  let return x st = x
+
+  let (>>=) gen f st =
+    f (gen st) st
+end
 
 
 (* Value generators *)
-type 'a gen = RS.t -> 'a
+type 'a gen = 'a Gen.t
+
+let choose l = match l with
+  | [] -> raise (Invalid_argument "quickcheck.choose")
+  | l ->
+      let a = Array.of_list l in
+      let print = snd a.(0) in
+      (fun st ->
+        let gen, _ = a.(RS.int st (Array.length a)) in
+        gen st), print
 
 let ug st = ()
 
@@ -121,7 +138,7 @@ let pp_triple p1 p2 p3 (t1,t2,t3) = "(" ^ p1 t1 ^ ", " ^ p2 t2 ^ ", " ^ p3 t3 ^ 
 
 (* Generator * pretty-printer pairs *)
 
-type 'a gen_print = 'a gen * ('a -> string)
+type 'a gen_print = 'a Gen.t * ('a -> string)
 let unit : unit gen_print = (ug, fun _ -> "()")
 
 let bool = (bg, string_of_bool)

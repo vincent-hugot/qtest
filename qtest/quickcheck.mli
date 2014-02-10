@@ -3,14 +3,25 @@ val (==>) : bool -> bool -> bool
     ie [not b1 || b2] (except that it is strict).
 *)
 
-type 'a gen = Random.State.t -> 'a
-(** A random generator for values of type 'a *)
+module Gen : sig
+  type 'a t = Random.State.t -> 'a
+  (** A random generator for values of type 'a *)
+
+  val return : 'a -> 'a t
+  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+end
+
+type 'a gen = 'a Gen.t
 
 type 'a gen_print = 'a gen * ('a -> string)
 (** a value of type ['a gen_print] is a pair where the first
     component generates random value of type ['a] and the
     second component can print them.
 *)
+
+val choose : 'a gen_print list -> 'a gen_print
+(** Choose among the given list of generators. The list must not
+  be empty; if it is Invalid_argument is raised. *)
 
 val unit : unit gen_print
 (** always generates [()], obviously. *)
@@ -110,7 +121,7 @@ val triple : 'a gen_print -> 'b gen_print -> 'c gen_print -> ('a * 'b * 'c) gen_
 (** combines three generators into a generator of 3-uples *)
 
 val option : 'a gen_print -> 'a option gen_print
-(**  *)
+(** choose between returning Some random value, or None *)
 
 val fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print
 (** generator of functions of arity 1.
