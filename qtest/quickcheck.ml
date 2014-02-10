@@ -5,6 +5,8 @@
 
 open Printf
 
+module RS = Random.State
+
 let rec foldn ~f ~init:acc i =
   if i = 0 then acc else foldn ~f ~init:(f acc i) (i-1)
 
@@ -12,71 +14,88 @@ let sum_int = List.fold_left (+) 0
 
 let (==>) b1 b2 = if b1 then b2 else true (* could use too => *)
 
+module Gen = struct
+  type 'a t = RS.t -> 'a
+
+  let return x st = x
+
+  let (>>=) gen f st =
+    f (gen st) st
+end
 
 
 (* Value generators *)
-type 'a gen = unit -> 'a
+type 'a gen = 'a Gen.t
 
-let ug () = ()
+let choose l = match l with
+  | [] -> raise (Invalid_argument "quickcheck.choose")
+  | l ->
+      let a = Array.of_list l in
+      let print = snd a.(0) in
+      (fun st ->
+        let gen, _ = a.(RS.int st (Array.length a)) in
+        gen st), print
 
-let bg () = Random.bool ()
+let ug st = ()
 
-let fg () =
-  exp (Random.float 15. *. (if Random.float 1. < 0.5 then 1. else -1.))
-  *. (if Random.float 1. < 0.5 then 1. else -1.)
+let bg st = RS.bool st
 
-let pfg () = abs_float (fg ())
-let nfg () = -.(pfg ())
+let fg st =
+  exp (RS.float st 15. *. (if RS.float st 1. < 0.5 then 1. else -1.))
+  *. (if RS.float st 1. < 0.5 then 1. else -1.)
+
+let pfg st = abs_float (fg st)
+let nfg st = -.(pfg st)
 
 (* natural number generator *)
-let nng () =
-  let p = Random.float 1. in
-  if p < 0.5 then Random.int 10
-  else if p < 0.75 then Random.int 100
-  else if p < 0.95 then Random.int 1_000
-  else Random.int 10_000
+let nng st =
+  let p = RS.float st 1. in
+  if p < 0.5 then RS.int st 10
+  else if p < 0.75 then RS.int st 100
+  else if p < 0.95 then RS.int st 1_000
+  else RS.int st 10_000
 
-let neg_ig () = -(nng ())
+let neg_ig st = -(nng st)
 
 (* Uniform random int generator *)
 let upos =
   if Sys.word_size = 32 then
-    fun () -> Random.bits ()
+    fun st -> RS.bits st
   else (* word size = 64 *)
-    fun () ->
-      Random.bits ()                        (* Bottom 30 bits *)
-      lor (Random.bits () lsl 30)           (* Middle 30 bits *)
-      lor ((Random.bits () land 3) lsl 60)  (* Top 2 bits *)  (* top bit = 0 *)
+    fun st ->
+      RS.bits st                        (* Bottom 30 bits *)
+      lor (RS.bits st lsl 30)           (* Middle 30 bits *)
+      lor ((RS.bits st land 3) lsl 60)  (* Top 2 bits *)  (* top bit = 0 *)
 
-let uig () = if Random.bool () then - upos () - 1 else upos ()
+let uig st = if RS.bool st then - (upos st) - 1 else upos st
 
-let random_binary_string length =
+let random_binary_string st length =
   (* 0b011101... *)
   let s = String.create (length + 2) in
   s.[0] <- '0';
   s.[1] <- 'b';
   for i = 0 to length - 1 do
-    s.[i+2] <- if Random.bool () then '0' else '1'
+    s.[i+2] <- if RS.bool st then '0' else '1'
   done;
   s
 
-let ui32g () = Int32.of_string (random_binary_string 32)  
-let ui64g () = Int64.of_string (random_binary_string 64)
+let ui32g st = Int32.of_string (random_binary_string st 32)  
+let ui64g st = Int64.of_string (random_binary_string st 64)
 
-let lg_size size gen () =
-  foldn ~f:(fun acc _ -> (gen ())::acc) ~init:[] (size ())
-let lg gen () = lg_size nng gen ()
+let lg_size size gen st =
+  foldn ~f:(fun acc _ -> (gen st)::acc) ~init:[] (size st)
+let lg gen st = lg_size nng gen st
 
-let ag_size size gen () =
-  Array.init (size ()) (fun _ -> gen ())
-let ag gen () = ag_size nng gen ()
+let ag_size size gen st =
+  Array.init (size st) (fun _ -> gen st)
+let ag gen st = ag_size nng gen st
 
-let pg gen1 gen2 () = (gen1 (), gen2 ())
+let pg gen1 gen2 st = (gen1 st, gen2 st)
 
-let tg g1 g2 g3 () = (g1 (),g2 (), g3 ())
+let tg g1 g2 g3 st = (g1 st,g2 st, g3 st)
 
 
-let cg () = char_of_int (Random.int 255)
+let cg st = char_of_int (RS.int st 255)
 
 let printable_chars =
   let l = 126-32+1 in
@@ -87,26 +106,26 @@ let printable_chars =
   s.[l-1] <- '\n';
   s
 
-let printable () = printable_chars.[Random.int (String.length printable_chars)]
-let numeral () = char_of_int (48 + Random.int 10)
+let printable st = printable_chars.[RS.int st (String.length printable_chars)]
+let numeral st = char_of_int (48 + RS.int st 10)
 
-let sg_size ?(gen = cg) size () =
-  let s = String.create (size ()) in
+let sg_size ?(gen = cg) size st =
+  let s = String.create (size st) in
   for i = 0 to String.length s - 1 do
-    s.[i] <- gen ()
+    s.[i] <- gen st
   done;
   s
-let sg ?gen () = sg_size ?gen nng ()
+let sg ?gen st = sg_size ?gen nng st
 
 
 (* corner cases *)
 
-let graft_corners gen corners = 
-  let cors = ref corners in fun () ->
-    match !cors with [] -> gen ()
+let graft_corners gen corners () = 
+  let cors = ref corners in fun st ->
+    match !cors with [] -> gen st
     | e::l -> cors := l; e
 
-let nng_corners () = graft_corners nng [0;1;2;max_int]
+let nng_corners () = graft_corners nng [0;1;2;max_int] ()
 
 (* Additional pretty-printers *)
 
@@ -119,7 +138,7 @@ let pp_triple p1 p2 p3 (t1,t2,t3) = "(" ^ p1 t1 ^ ", " ^ p2 t2 ^ ", " ^ p3 t3 ^ 
 
 (* Generator * pretty-printer pairs *)
 
-type 'a gen_print = 'a gen * ('a -> string)
+type 'a gen_print = 'a Gen.t * ('a -> string)
 let unit : unit gen_print = (ug, fun _ -> "()")
 
 let bool = (bg, string_of_bool)
@@ -163,10 +182,10 @@ let pair (g1,p1) (g2,p2) = (pg g1 g2, pp_pair p1 p2)
 let triple (g1,p1) (g2,p2) (g3,p3) = (tg g1 g2 g3, pp_triple p1 p2 p3)
 
 let option (g1, p1) =
-  let g () =
-    let p = Random.float 1. in
+  let g st =
+    let p = RS.float st 1. in
     if p < 0.15 then None
-    else Some (g1 ()) in
+    else Some (g1 st) in
   let p = function
     | None -> "None"
     | Some x -> "Some " ^ p1 x in
@@ -175,7 +194,7 @@ let option (g1, p1) =
 let fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print =
   fun (_g1, p1) (g2, p2) ->
     let magic_object = Obj.magic (object end) in
-    let gen : ('a -> 'b) gen = fun () ->
+    let gen : ('a -> 'b) gen = fun st ->
       let h = Hashtbl.create 10 in
       fun x ->
         if x == magic_object then
@@ -183,7 +202,7 @@ let fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print =
         else
           try Hashtbl.find h x
           with Not_found ->
-            let b = g2 () in
+            let b = g2 st in
             Hashtbl.add h x b;
             b in
     let pp : ('a -> 'b) -> string = fun f ->
@@ -232,18 +251,18 @@ let frequencyl l = frequency (List.map (fun (i,e) -> (i,always e)) l)
 (** [laws iter gen func] applies [func] repeatedly ([iter] times) on output of [gen], and
     if [func] ever returns false, then the input that caused the failure is returned
     optionally.  *)
-let rec laws iter gen func =
+let rec laws iter gen func st =
   if iter <= 0 then None
   else
-    let input = gen () in
+    let input = gen st in
     try
       if not (func input) then Some input
-      else laws (iter-1) gen func
+      else laws (iter-1) gen func st
     with _ -> Some input
 
 (** like [laws], but executes all tests anyway and returns optionally the
   smallest failure-causing input, wrt. some measure *)
-let rec laws_smallest measure iter gen func =
+let rec laws_smallest measure iter gen func st =
   let return = ref None in
   let register input =
     match !return with
@@ -254,7 +273,7 @@ let rec laws_smallest measure iter gen func =
       return := Some input
   in
   for i = 1 to iter do
-    let input = gen () in
+    let input = gen st in
     try if not (func input) then register input
     with _ -> register input
   done;
@@ -264,10 +283,10 @@ let rec laws_smallest measure iter gen func =
 let default_count = 100
 
 (** Like laws, but throws an exception instead of returning an option.  *)
-let laws_exn ?small ?(count=default_count) name (gen,pp) func =
+let laws_exn ?small ?(count=default_count) name (gen,pp) func st =
   let result = match small with
-  | None -> laws count gen func
-  | Some measure -> laws_smallest measure count gen func
+  | None -> laws count gen func st
+  | Some measure -> laws_smallest measure count gen func st
   in match result with
     | None -> ()
     | Some i -> failwith (Printf.sprintf "law %s failed for %s" name (pp i))
