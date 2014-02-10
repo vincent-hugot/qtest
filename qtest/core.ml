@@ -57,7 +57,7 @@ let outf_target s = fpf !outc_target s
 (** indispensable preamble *)
 let hard_coded_preamble = "open OUnit;;\n\
 module Q = Quickcheck;;let ( ==> ) = Q.( ==> );;\n\
-Random.self_init()\n\n"
+let __qtest_random_state = Random.State.make_self_init();; \n\n"
 
 (** global preamble, user-definable *)
 let global_preamble = Buffer.create 100
@@ -228,7 +228,7 @@ let process uid = function
         "\"%s\" >:: (%s fun () -> OUnit.assert_equal ~msg:%s %s %s%s);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Random -> outf
-        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s);\n"
+        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s __qtest_random_state);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Raw -> outf
         "\"%s\" >:: (%s fun () -> (%s%s));\n"
