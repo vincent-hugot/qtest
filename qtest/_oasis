@@ -10,7 +10,7 @@ Executable qtest
   Path:   .
   BuildTools:  ocamlbuild
   MainIs: qtest.ml
-  BuildDepends: str
+  BuildDepends: bytes
   CompiledObject: best
 
 Library "QTest2Lib"
