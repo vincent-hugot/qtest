@@ -1,0 +1,5 @@
+# OASIS_START
+# OASIS_STOP
+<**/*.ml>: warn_A, warn(-4), warn(-44), warn(-50)
+# unescaped end-of-line
+<qtest.ml*>: warn(-29)
