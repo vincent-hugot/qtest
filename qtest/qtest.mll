@@ -237,35 +237,35 @@ let set_output path =
 let options = [
 "-o",               Arg.String set_output, "";
 "--output",         Arg.String set_output,
-"<path>     (default: standard output)
-Open or create a file for output; the resulting file will be an OCaml source file containing all the tests
+"<path>     (default: standard output)\n\
+Open or create a file for output; the resulting file will be an OCaml source file containing all the tests\n\
 ";
 
 "-p",               Arg.String add_preamble, "";
 "--preamble",       Arg.String add_preamble,
-"<string>   (default: empty)
-Add code to the tests preamble; typically this will be an instruction of the form 'open Module;;'
+"<string>   (default: empty)\n\
+Add code to the tests preamble; typically this will be an instruction of the form 'open Module;;'\n\
 ";
 
 "--preamble-file",  Arg.String add_preamble_file,
-"<path>
-Add the contents of the given file to the tests preamble
+"<path>\n\
+Add the contents of the given file to the tests preamble\n\
 ";
 
 "--run-only",       Arg.String (fun s->Core._run_only := Some s),
-"<function name>
-Only generate tests pertaining to this function, as indicated by the test header
+"<function name>\n\
+Only generate tests pertaining to this function, as indicated by the test header\n\
 ";
 
 "--shuffle",        Arg.Unit (fun ()->toggle _shuffle; if !_shuffle then epf "!!! SHUFFLE is ON !!!\n"),
-"           (default: turned off)
+"           (default: turned off)\n\
 Toggle test execution order randomisation; submodules using injection are not shuffled";
 ]
 
 let usage_msg =
 (* OPTIONS: is here to mimick the pre-Arg behavior *)
-"USAGE: qtest [options] extract <file.mli?>...
-
+"USAGE: qtest [options] extract <file.mli?>...\n\
+\n\
 OPTIONS:"
 
 let () =
