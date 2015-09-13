@@ -1,5 +1,5 @@
 %{
-open Core;;
+open Core
 %}
 
 %token <string> ID PARAM UID

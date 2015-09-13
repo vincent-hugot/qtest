@@ -1,4 +1,4 @@
-open OUnit;;
+open OUnit
 
 let ps,pl = print_string,print_endline
 let va = Printf.sprintf

@@ -3,7 +3,7 @@
  * qTest: quick unit tests: extract oUnit tests from OCaml components
  * under GNU GPL v3: see qtest.mll
  *)
-module B = Buffer;;
+module B = Buffer
 let b = B.create 80
 } (***************************************************************)
 

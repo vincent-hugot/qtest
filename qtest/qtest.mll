@@ -22,10 +22,10 @@
  *
  *)
 
-open Core;;
-open Qparse;;
+open Core
+open Qparse
 
-module B = Buffer;;
+module B = Buffer
 (** the do-it-all buffer; always clear *after* use *)
 let buffy = B.create 80
 
@@ -244,7 +244,7 @@ Open or create a file for output; the resulting file will be an OCaml source fil
 "-p",               Arg.String add_preamble, "";
 "--preamble",       Arg.String add_preamble,
 "<string>   (default: empty)\n\
-Add code to the tests preamble; typically this will be an instruction of the form 'open Module;;'\n\
+Add code to the tests preamble; typically this will be an instruction of the form 'open Module'\n\
 ";
 
 "--preamble-file",  Arg.String add_preamble_file,
