@@ -4,7 +4,7 @@ Version:     2.0.0
 Synopsis:    qTest: inline unit tests extractor, from Batteries.
 Authors:     Vincent HUGOT
 License:     GPL-3.0
-Plugins:     META (0.2)
+Plugins:     META (0.2), DevFiles (0.3)
 
 Executable qtest
   Path:   .
@@ -18,4 +18,4 @@ Library "QTest2Lib"
   BuildTools:   ocamlbuild
   Modules:      Quickcheck, Runner
   BuildDepends: oUnit
-  
+
