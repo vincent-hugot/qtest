@@ -56,6 +56,26 @@ module Gen : sig
   val sized : 'a sized -> 'a t
 
   val fix : ('a sized -> 'a sized) -> 'a sized (** Fixpoint; size decreases *)
+
+  (** Example:
+  {[
+  type tree = Leaf of int | Node of tree * tree
+
+  let leaf x = Leaf x
+  let node x y = Node (x,y)
+
+  let g = Quickcheck.Gen.(sized @@ fix
+    (fun self n -> match n with
+      | 0 -> lift leaf int
+      | n ->
+        frequency
+          [1, lift leaf nat;
+           2, lift2 node (self (n/2)) (self (n/2))]
+      ))
+
+  ]}
+
+  *)
 end
 
 type 'a arbitrary = {
