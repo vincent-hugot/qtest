@@ -448,16 +448,18 @@ module LawsState = struct
     st: Random.State.t;
     res: 'a result;
     mutable num: int;  (** number of iterations to do *)
-    mutable max_gen: int; (** Remaining number of additional generations in case of failed precond *)
+    mutable max_gen: int; (** maximum number of generations allowed *)
   }
 
-  let is_done state = state.num <= 0
+  let is_done state = state.num <= 0 || state.max_gen <= 0
 
-  let decr state = state.num <- state.num - 1
-  let decr_gen state = state.max_gen <- state.max_gen - 1
+  let decr_count state =
+    state.res.res_count <- state.res.res_count + 1;
+    state.num <- state.num - 1
 
   let new_input state =
     state.res.res_gen <- state.res.res_gen + 1;
+    state.max_gen <- state.max_gen - 1;
     state.arb.gen state.st
 
   (* statistics on inputs *)
@@ -475,12 +477,15 @@ module LawsState = struct
     | Some f ->
       let l = f i in
       try_list_ st l ~default:i
-    and try_list_ st l ~default = match l with
-      | [] -> default
-      | x :: tail ->
+  and try_list_ st l ~default = match l with
+    | [] -> default
+    | x :: tail ->
+        try
           if st.func x
           then try_list_ st tail ~default
           else shrink st x (* shrinked by one step *)
+        with FailedPrecondition ->
+          try_list_ st tail ~default
 end
 
 module S = LawsState
@@ -501,18 +506,17 @@ let rec laws state =
       if state.S.func input
       then (
         (* one test ok *)
-        S.decr state;
+        S.decr_count state;
         laws state
       ) else handle_fail state input
     with
-    | FailedPrecondition when state.S.max_gen > 0 ->
-        S.decr_gen state;
-        laws state
+    | FailedPrecondition when state.S.max_gen > 0 -> laws state
     | _ -> handle_fail state input
 and handle_fail state input =
   (* first, shrink *)
   let input = S.shrink state input in
   (* fail *)
+  S.decr_count state;
   fail state.S.res input;
   if _is_some state.S.arb.small
     then laws state
