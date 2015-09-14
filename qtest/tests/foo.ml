@@ -149,7 +149,7 @@ module Tree = struct
                    3, lift2 Tree.node (self (n/2)) (self (n/2))]
   ))
 
-  let arb = Q.make ~small:Tree.size ~shrink ~print gen
+  let arb_tree = Q.make ~small:Tree.size ~shrink ~print gen
   *)
 
   let rec rev = function
@@ -157,9 +157,9 @@ module Tree = struct
     | Node (x,y) -> node (rev y) (rev x)
 
   (*$Q
-    arb (fun t -> Tree.rev (Tree.rev t) = t)
-    arb (fun t -> Tree.size t = Tree.size (Tree.rev t))
-    arb (fun t -> t = Tree.rev t)
+    arb_tree (fun t -> Tree.rev (Tree.rev t) = t)
+    arb_tree (fun t -> Tree.size t = Tree.size (Tree.rev t))
+    arb_tree (fun t -> (Tree.size t > 1) ==> (t = Tree.rev t))
   *)
 end
 
@@ -230,3 +230,6 @@ let strange_string = " \"
 *)
 
 
+(*$Q even & ~count:10
+  (Q.small_int_corners ()) (fun n-> odd (abs n+3) = even (abs n))
+*)
