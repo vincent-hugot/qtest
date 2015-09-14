@@ -255,15 +255,18 @@ val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
 exception LawFailed of string
 
 val laws_exn :
-  ?count:int ->
+  ?small:('a -> int) -> ?count:int -> ?max_gen:int ->
   string -> 'a arbitrary -> ('a -> bool) -> Random.State.t -> unit
  (** [laws_exn ?small ?count name arbitrary law st] generates up to [count] random
      values of type ['a] with using [arbitrary] and the random state [st]. The
      predicate [law] is called on them and if it returns [false] or raises an
      exception then we have a counter example for the [law].
 
-     If [small] is not given, then the generations stop at the first counter
-     example.
+     @param small kept for compatibility reasons; if provided, replaces
+      the field [arbitrary.small].
+
+     @param max_gen maximum number of times the generation function is called
+      to replace inputs that do not satisfy preconditions
 
      @raise LawFailed if a counter example has been found, containing the stringified example
  *)

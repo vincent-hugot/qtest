@@ -10,6 +10,8 @@ module RS = Random.State
 let rec foldn ~f ~init:acc i =
   if i = 0 then acc else foldn ~f ~init:(f acc i) (i-1)
 
+let _is_some = function Some _ -> true | None -> false
+
 let _opt_or ~d ~f = function
   | None -> d
   | Some x -> f x
@@ -32,7 +34,10 @@ let _opt_sum a b = match a, b with
 
 let sum_int = List.fold_left (+) 0
 
-let (==>) b1 b2 = if b1 then b2 else true (* could use too => *)
+exception FailedPrecondition
+(* raised if precondition is false *)
+
+let (==>) b1 b2 = if b1 then b2 else raise FailedPrecondition
 
 module Gen = struct
   type 'a t = RS.t -> 'a
@@ -414,80 +419,132 @@ let map_same_type f a =
 
 (* Laws *)
 
+type 'a result_state =
+  | Success
+  | Failed of 'a * int  (* number of failures *)
+
+(* result returned by [laws] *)
+type 'a result = {
+  mutable res_state : 'a result_state;
+  mutable res_count: int;  (* number of tests *)
+  mutable res_gen: int; (* number of generated cases *)
+  res_collect: (string, int) Hashtbl.t lazy_t;
+}
+
+let fail ?small res i = match res.res_state with
+  | Success -> res.res_state <- Failed (i, 1)
+  | Failed (i', n) ->
+      match small with
+      | Some small when small i < small i' ->
+          res.res_state <- Failed (i, n+1)
+      | _ ->
+          res.res_state <- Failed (i', n+1)
+
+module LawsState = struct
+  (* state required by [laws] to execute *)
+  type 'a t = {
+    arb: 'a arbitrary;
+    func: 'a -> bool;
+    st: Random.State.t;
+    res: 'a result;
+    mutable num: int;  (** number of iterations to do *)
+    mutable max_gen: int; (** Remaining number of additional generations in case of failed precond *)
+  }
+
+  let is_done state = state.num <= 0
+
+  let decr state = state.num <- state.num - 1
+  let decr_gen state = state.max_gen <- state.max_gen - 1
+
+  let new_input state =
+    state.res.res_gen <- state.res.res_gen + 1;
+    state.arb.gen state.st
+
+  (* statistics on inputs *)
+  let collect st i = match st.arb.collect with
+    | None -> ()
+    | Some f ->
+        let key = f i in
+        let (lazy tbl) = st.res.res_collect in
+        let n = try Hashtbl.find tbl key with Not_found -> 0 in
+        Hashtbl.replace tbl key (n+1)
+
+  (* try to shrink counter-ex [i] into a smaller one *)
+  let rec shrink st i = match st.arb.shrink with
+    | None -> i
+    | Some f ->
+      let l = f i in
+      try_list_ st l ~default:i
+    and try_list_ st l ~default = match l with
+      | [] -> default
+      | x :: tail ->
+          if st.func x
+          then try_list_ st tail ~default
+          else shrink st x (* shrinked by one step *)
+end
+
+module S = LawsState
 
 (** [laws iter gen func] applies [func] repeatedly ([iter] times) on output of [gen], and
     if [func] ever returns false, then the input that caused the failure is returned
-    optionally.  *)
-let rec laws iter gen func st =
-  if iter <= 0 then None
+    in [Failed].
+    If [func input] raises [FailedPrecondition] then  the input is discarded, unless
+       max_gen is 0.
+    @param max_gen max number of times [gen] is called to replace inputs
+      that fail the precondition *)
+let rec laws state =
+  if S.is_done state then state.S.res
   else
-    let input = gen st in
+    let input = S.new_input state in
+    S.collect state input;
     try
-      if not (func input) then Some input
-      else laws (iter-1) gen func st
-    with _ -> Some input
-
-(** like [laws], but executes all tests anyway and returns optionally the
-  smallest failure-causing input, wrt. some measure *)
-let laws_smallest measure iter gen func st =
-  let return = ref None in
-  let register input =
-    match !return with
-    | None ->
-      return := Some input
-    | Some x ->
-      if measure input < measure x then
-      return := Some input
-  in
-  for _i = 1 to iter do
-    let input = gen st in
-    try if not (func input) then register input
-    with _ -> register input
-  done;
-  !return
-
-(* TODO sized generators (use them everywhere but allow make to
-   take generator that ignores size) *)
-
-(* TODO: redefine [==>]; if assumption failed, try to generate new one
-   but set limit to, say, 1000 *)
-
-(* TODO: shrinking if available; otherwise use smallest if small defined *)
+      if state.S.func input
+      then (
+        (* one test ok *)
+        S.decr state;
+        laws state
+      ) else handle_fail state input
+    with
+    | FailedPrecondition when state.S.max_gen > 0 ->
+        S.decr_gen state;
+        laws state
+    | _ -> handle_fail state input
+and handle_fail state input =
+  (* first, shrink *)
+  let input = S.shrink state input in
+  (* fail *)
+  fail state.S.res input;
+  if _is_some state.S.arb.small
+    then laws state
+    else state.S.res
 
 let default_count = 100
+let default_max_gen = 300
 
 exception LawFailed of string
 
 let no_print_ _ = "<no printer>"
 
+(* TODO: if some flag enabled, print stats about collect? *)
+
 (** Like laws, but throws an exception instead of returning an option.  *)
-let laws_exn ?(count=default_count) name a func st =
-  let result = match a.small with
-  | None -> laws count a.gen func st
-  | Some measure -> laws_smallest measure count a.gen func st
-  in match result with
-    | None -> ()
-    | Some i ->
+let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a func st =
+  let a = match small with None -> a | Some f -> set_small f a in
+  let state = {S.
+    func;
+    st;
+    arb = a;
+    max_gen;
+    num = count;
+    res = {
+      res_state=Success; res_count=0; res_gen=0;
+      res_collect=lazy (Hashtbl.create 10);
+    };
+  } in
+  let result = laws state in
+  match result.res_state with
+    | Success -> ()
+    | Failed (i, n) ->
         let pp = match a.print with None -> no_print_ | Some x -> x in
-        let msg = Printf.sprintf "law %s failed for %s" name (pp i) in
+        let msg = Printf.sprintf "law %s failed (%d cases) for %s" name n (pp i) in
         raise (LawFailed msg)
-
-let rec statistic_number = function
-  | []    -> []
-  | x::xs -> let (splitg, splitd) = List.partition (fun y -> y = x) xs in
-    (1 + List.length splitg, x) :: statistic_number splitd
-
-(* in percentage *)
-let statistic xs =
-  let stat_num = statistic_number xs in
-  let totals = sum_int (List.map fst stat_num) in
-  List.map (fun (i, v) -> ((i * 100) / totals), v) stat_num
-
-(* TODO: expose in .mli? document *)
-let laws2 iter func gen =
-  let res = foldn ~init:[] iter
-    ~f:(fun acc _ -> let n = gen () in (n, func n) :: acc)
-  in
-  let stat = statistic (List.map (fun (_, (_, v)) -> v) res) in
-  let res = List.filter (fun (_, (b, _)) -> not b) res in
-  if res = [] then (None, stat) else (Some (fst (List.hd res)), stat)
