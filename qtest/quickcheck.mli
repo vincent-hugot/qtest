@@ -22,6 +22,37 @@ module Gen : sig
   val frequency : (int * 'a t) list -> 'a t
   val frequencyl : (int * 'a) list -> 'a t
 
+  val unit: unit t
+  val bool: bool t
+
+  val float: float t
+  val pfloat : float t (** positive float *)
+  val nfloat : float t (** negative float *)
+
+  val nat : int t (** small nat *)
+  val neg_int : int t (** negative int *)
+  val pint : int t (** positive uniform int *)
+  val int : int t (** uniform int *)
+
+  val ui32 : int32 t
+  val ui64 : int64 t
+
+  val list : 'a t -> 'a list t
+  val list_size : int t -> 'a t -> 'a list t
+
+  val array : 'a t -> 'a array t
+  val array_size : int t -> 'a t -> 'a array t
+
+  val pair : 'a t -> 'b t -> ('a * 'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
+
+  val char : char t
+  val printable : char t
+  val numeral : char t
+
+  val string_size : ?gen:char t -> int t -> string t
+  val string : ?gen:char t -> string t
+
   val sized : 'a sized -> 'a t
 
   val fix : ('a sized -> 'a sized) -> 'a sized (** Fixpoint; size decreases *)

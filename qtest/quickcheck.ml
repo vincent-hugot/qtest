@@ -60,31 +60,31 @@ module Gen = struct
     in
     aux 0 l
 
+  let frequency l st = frequencyl l st st
+
   (* natural number generator *)
-  let nng st =
+  let nat st =
     let p = RS.float st 1. in
     if p < 0.5 then RS.int st 10
     else if p < 0.75 then RS.int st 100
     else if p < 0.95 then RS.int st 1_000
     else RS.int st 10_000
 
-  let frequency l st = frequencyl l st st
+  let unit _st = ()
 
-  let ug _st = ()
+  let bool st = RS.bool st
 
-  let bg st = RS.bool st
-
-  let fg st =
+  let float st =
     exp (RS.float st 15. *. (if RS.float st 1. < 0.5 then 1. else -1.))
     *. (if RS.float st 1. < 0.5 then 1. else -1.)
 
-  let pfg st = abs_float (fg st)
-  let nfg st = -.(pfg st)
+  let pfloat st = abs_float (float st)
+  let nfloat st = -.(pfloat st)
 
-  let neg_ig st = -(nng st)
+  let neg_int st = -(nat st)
 
   (* Uniform random int generator *)
-  let upos =
+  let pint =
     if Sys.word_size = 32 then
       fun st -> RS.bits st
     else (* word size = 64 *)
@@ -93,7 +93,7 @@ module Gen = struct
         lor (RS.bits st lsl 30)           (* Middle 30 bits *)
         lor ((RS.bits st land 3) lsl 60)  (* Top 2 bits *)  (* top bit = 0 *)
 
-  let uig st = if RS.bool st then - (upos st) - 1 else upos st
+  let int st = if RS.bool st then - (pint st) - 1 else pint st
 
   let random_binary_string st length =
     (* 0b011101... *)
@@ -105,23 +105,22 @@ module Gen = struct
     done;
     Bytes.unsafe_to_string s
 
-  let ui32g st = Int32.of_string (random_binary_string st 32)
-  let ui64g st = Int64.of_string (random_binary_string st 64)
+  let ui32 st = Int32.of_string (random_binary_string st 32)
+  let ui64 st = Int64.of_string (random_binary_string st 64)
 
-  let lg_size size gen st =
+  let list_size size gen st =
     foldn ~f:(fun acc _ -> (gen st)::acc) ~init:[] (size st)
-  let lg gen st = lg_size nng gen st
+  let list gen st = list_size nat gen st
 
-  let ag_size size gen st =
+  let array_size size gen st =
     Array.init (size st) (fun _ -> gen st)
-  let ag gen st = ag_size nng gen st
+  let array gen st = array_size nat gen st
 
-  let pg gen1 gen2 st = (gen1 st, gen2 st)
+  let pair gen1 gen2 st = (gen1 st, gen2 st)
 
-  let tg g1 g2 g3 st = (g1 st,g2 st, g3 st)
+  let triple g1 g2 g3 st = (g1 st,g2 st, g3 st)
 
-
-  let cg st = char_of_int (RS.int st 255)
+  let char st = char_of_int (RS.int st 255)
 
   let printable_chars =
     let l = 126-32+1 in
@@ -135,13 +134,13 @@ module Gen = struct
   let printable st = printable_chars.[RS.int st (String.length printable_chars)]
   let numeral st = char_of_int (48 + RS.int st 10)
 
-  let sg_size ?(gen = cg) size st =
+  let string_size ?(gen = char) size st =
     let s = Bytes.create (size st) in
     for i = 0 to String.length s - 1 do
       Bytes.set s i (gen st)
     done;
     Bytes.unsafe_to_string s
-  let sg ?gen st = sg_size ?gen nng st
+  let string ?gen st = string_size ?gen nat st
 
   (* corner cases *)
 
@@ -150,12 +149,12 @@ module Gen = struct
       match !cors with [] -> gen st
       | e::l -> cors := l; e
 
-  let nng_corners () = graft_corners nng [0;1;2;max_int] ()
+  let nng_corners () = graft_corners nat [0;1;2;max_int] ()
 
   (* sized, fix *)
 
   let sized f st =
-    let n = nng st in
+    let n = nat st in
     f n st
 
   let fix f =
@@ -214,33 +213,33 @@ let choose l = match l with
           arb.gen st)
 
 let unit : unit arbitrary =
-  make ~small:small1 ~shrink:shrink_nil ~print:(fun _ -> "()") Gen.ug
+  make ~small:small1 ~shrink:shrink_nil ~print:(fun _ -> "()") Gen.unit
 
-let bool = make_scalar ~print:string_of_bool Gen.bg
-let float = make_scalar ~print:string_of_float Gen.fg
-let pos_float = make_scalar ~print:string_of_float Gen.pfg
-let neg_float = make_scalar ~print:string_of_float Gen.nfg
+let bool = make_scalar ~print:string_of_bool Gen.bool
+let float = make_scalar ~print:string_of_float Gen.float
+let pos_float = make_scalar ~print:string_of_float Gen.pfloat
+let neg_float = make_scalar ~print:string_of_float Gen.nfloat
 
-let int = make_scalar ~print:string_of_int Gen.uig
-let pos_int = make_scalar ~print:string_of_int Gen.upos
-let small_int = make_scalar ~print:string_of_int Gen.nng
+let int = make_scalar ~print:string_of_int Gen.int
+let pos_int = make_scalar ~print:string_of_int Gen.pint
+let small_int = make_scalar ~print:string_of_int Gen.nat
 let small_int_corners () = make_scalar ~print:string_of_int (Gen.nng_corners ())
-let neg_int = make_scalar ~print:string_of_int Gen.neg_ig
+let neg_int = make_scalar ~print:string_of_int Gen.neg_int
 
-let int32 = make_scalar ~print:(fun i -> Int32.to_string i ^ "l") Gen.ui32g
-let int64 = make_scalar ~print:(fun i -> Int64.to_string i ^ "L") Gen.ui64g
+let int32 = make_scalar ~print:(fun i -> Int32.to_string i ^ "l") Gen.ui32
+let int64 = make_scalar ~print:(fun i -> Int64.to_string i ^ "L") Gen.ui64
 
-let char = make_scalar ~print:(sprintf "%C") Gen.cg
+let char = make_scalar ~print:(sprintf "%C") Gen.char
 let printable_char = make_scalar ~print:(sprintf "%C") Gen.printable
 let numeral_char = make_scalar ~print:(sprintf "%C") Gen.numeral
 
 let string_gen_of_size size gen =
-  make ~small:String.length ~print:(sprintf "%S") (Gen.sg_size ~gen size)
+  make ~small:String.length ~print:(sprintf "%S") (Gen.string_size ~gen size)
 let string_gen gen =
-  make ~small:String.length ~print:(sprintf "%S") (Gen.sg ~gen)
+  make ~small:String.length ~print:(sprintf "%S") (Gen.string ~gen)
 
-let string = string_gen Gen.cg
-let string_of_size size = string_gen_of_size size Gen.cg
+let string = string_gen Gen.char
+let string_of_size size = string_gen_of_size size Gen.char
 
 let printable_string = string_gen Gen.printable
 let printable_string_of_size size = string_gen_of_size size Gen.printable
@@ -265,7 +264,7 @@ let list a =
     ~small
     ~shrink:shrink_list_
     ?print
-    (Gen.lg a.gen)
+    (Gen.list a.gen)
 
 let list_of_size size a =
   let small = _opt_or a.small ~f:list_sum_ ~d:List.length in
@@ -274,7 +273,7 @@ let list_of_size size a =
     ~small
     ~shrink:shrink_list_
     ?print
-    (Gen.lg_size size a.gen)
+    (Gen.list_size size a.gen)
 
 let array_sum_ f a = Array.fold_left (fun acc x -> f x+acc) 0 a
 
@@ -292,7 +291,7 @@ let array a =
     ~small
     ~shrink:shrink_array_
     ?print:(_opt_map ~f:pp_array a.print)
-    (Gen.ag a.gen)
+    (Gen.array a.gen)
 
 let array_of_size size a =
   let small = _opt_or ~d:Array.length ~f:array_sum_ a.small in
@@ -300,7 +299,7 @@ let array_of_size size a =
     ~small
     ~shrink:shrink_array_
     ?print:(_opt_map ~f:pp_array a.print)
-    (Gen.ag_size size a.gen)
+    (Gen.array_size size a.gen)
 
 (* TODO: add shrinking *)
 
@@ -308,13 +307,13 @@ let pair a b =
   make
     ?small:(_opt_map_2 ~f:(fun f g (x,y) -> f x+g y) a.small b.small)
     ?print:(_opt_map_2 ~f:pp_pair a.print b.print)
-    (Gen.pg a.gen b.gen)
+    (Gen.pair a.gen b.gen)
 
 let triple a b c =
   make
     ?small:(_opt_map_3 ~f:(fun f g h (x,y,z) -> f x+g y+h z) a.small b.small c.small)
     ?print:(_opt_map_3 ~f:pp_triple a.print b.print c.print)
-    (Gen.tg a.gen b.gen c.gen)
+    (Gen.triple a.gen b.gen c.gen)
 
 let option a =
   let some_ x = Some x in
