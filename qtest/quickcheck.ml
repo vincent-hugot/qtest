@@ -10,6 +10,10 @@ module RS = Random.State
 let rec foldn ~f ~init:acc i =
   if i = 0 then acc else foldn ~f ~init:(f acc i) (i-1)
 
+let _opt_or ~d ~f = function
+  | None -> d
+  | Some x -> f x
+
 let _opt_map ~f = function
   | None -> None
   | Some x -> Some (f x)
@@ -236,21 +240,28 @@ let shrink_list_ l =
   in
   remove_one [] l
 
+let list_sum_ f l = List.fold_left (fun acc x-> f x+acc) 0 l
+
 let list a =
+  (* small sums sub-sizes if present, otherwise just length *)
+  let small = _opt_or a#small ~f:list_sum_ ~d:List.length in
   let print = _opt_map a#print ~f:pp_list in
   make
-    ~small:List.length
+    ~small
     ~shrink:shrink_list_
     ?print
     (lg a#gen)
 
 let list_of_size size a =
+  let small = _opt_or a#small ~f:list_sum_ ~d:List.length in
   let print = _opt_map a#print ~f:pp_list in
   make
-    ~small:List.length
+    ~small
     ~shrink:shrink_list_
     ?print
     (lg_size size a#gen)
+
+let array_sum_ f a = Array.fold_left (fun acc x -> f x+acc) 0 a
 
 let shrink_array_ a =
   let b = Array.init (Array.length a)
@@ -261,15 +272,17 @@ let shrink_array_ a =
   Array.to_list b
 
 let array a =
+  let small = _opt_or ~d:Array.length ~f:array_sum_ a#small in
   make
-    ~small:Array.length
+    ~small
     ~shrink:shrink_array_
     ?print:(_opt_map ~f:pp_array a#print)
     (ag a#gen)
 
 let array_of_size size a =
+  let small = _opt_or ~d:Array.length ~f:array_sum_ a#small in
   make
-    ~small:Array.length
+    ~small
     ~shrink:shrink_array_
     ?print:(_opt_map ~f:pp_array a#print)
     (ag_size size a#gen)
@@ -298,13 +311,14 @@ let option a =
     | None -> "None"
     | Some x -> "Some " ^ f x
   and small =
-    _opt_map ~f:(fun f o -> match o with None -> 0 | Some x -> f x) a#small
+    _opt_or a#small ~d:(function None -> 0 | Some _ -> 1)
+      ~f:(fun f o -> match o with None -> 0 | Some x -> f x)
   and shrink =
     _opt_map a#shrink
     ~f:(fun f o -> match o with None -> [] | Some x -> List.map some_ (f x))
   in
   make
-    ?small
+    ~small
     ?shrink
     ?print:(_opt_map ~f:p a#print)
     (g a#gen)
