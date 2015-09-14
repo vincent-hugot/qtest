@@ -47,6 +47,10 @@ let time_fun f x y =
     (Unix.gettimeofday () -. begin_time, f x y)
 
 let run test =
+  let options = Arg.align
+    [ "-verbose", Arg.Set Quickcheck.verbose, " enable verbose tests"
+    ] in
+  Arg.parse options (fun _ ->()) "run qtest suite";
   let _counter = ref (0,0,0) in (* Success, Failure, Other *)
   let total_tests = test_case_count test in
   let update = function

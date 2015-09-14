@@ -529,7 +529,7 @@ exception LawFailed of string
 
 let no_print_ _ = "<no printer>"
 
-(* TODO: if some flag enabled, print stats about collect? *)
+let verbose = ref false
 
 (** Like laws, but throws an exception instead of returning an option.  *)
 let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a func st =
@@ -546,6 +546,19 @@ let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a fun
     };
   } in
   let result = laws state in
+  if !verbose then (
+    Printf.eprintf "law %s: %d relevant cases (%d total)\n"
+      name result.res_count result.res_gen;
+    begin match a.collect with
+    | None -> ()
+    | Some _ ->
+        let (lazy tbl) = result.res_collect in
+        Hashtbl.iter
+          (fun case num -> Printf.eprintf "  %s: %d cases\n" case num)
+          tbl
+    end;
+    flush stderr;
+  );
   match result.res_state with
     | Success -> ()
     | Failed (i, n) ->

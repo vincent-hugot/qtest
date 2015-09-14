@@ -65,12 +65,13 @@ module Gen : sig
   let node x y = Node (x,y)
 
   let g = Quickcheck.Gen.(sized @@ fix
-    (fun self n -> match n with
-      | 0 -> lift leaf int
+    (fun self n st -> match n with
+      | 0 -> lift leaf nat st
       | n ->
         frequency
           [1, lift leaf nat;
            2, lift2 node (self (n/2)) (self (n/2))]
+           st
       ))
 
   ]}
@@ -254,6 +255,10 @@ val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
 
 exception LawFailed of string
 
+val verbose : bool ref
+(** Default is [false], but if [true], random tests will  print statistics
+    on their set of inputs *)
+
 val laws_exn :
   ?small:('a -> int) -> ?count:int -> ?max_gen:int ->
   string -> 'a arbitrary -> ('a -> bool) -> Random.State.t -> unit
@@ -264,7 +269,6 @@ val laws_exn :
 
      @param small kept for compatibility reasons; if provided, replaces
       the field [arbitrary.small].
-
      @param max_gen maximum number of times the generation function is called
       to replace inputs that do not satisfy preconditions
 
