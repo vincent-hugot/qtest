@@ -525,8 +525,6 @@ and handle_fail state input =
 let default_count = 100
 let default_max_gen = 300
 
-exception LawFailed of string
-
 let no_print_ _ = "<no printer>"
 
 let verbose = ref false
@@ -564,4 +562,4 @@ let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a fun
     | Failed (i, n) ->
         let pp = match a.print with None -> no_print_ | Some x -> x in
         let msg = Printf.sprintf "law %s failed on %d cases. Ex: %s" name n (pp i) in
-        raise (LawFailed msg)
+        failwith msg

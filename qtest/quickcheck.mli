@@ -253,8 +253,6 @@ val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
 (** Specialization of [map] when the transformation preserves the type, which
    makes shrinker, printer, etc. still relevant *)
 
-exception LawFailed of string
-
 val verbose : bool ref
 (** Default is [false], but if [true], random tests will  print statistics
     on their set of inputs *)
@@ -272,5 +270,5 @@ val laws_exn :
      @param max_gen maximum number of times the generation function is called
       to replace inputs that do not satisfy preconditions
 
-     @raise LawFailed if a counter example has been found, containing the stringified example
+     @raise Failure if a counter example has been found, containing the stringified example
  *)
