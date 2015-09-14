@@ -550,5 +550,5 @@ let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a fun
     | Success -> ()
     | Failed (i, n) ->
         let pp = match a.print with None -> no_print_ | Some x -> x in
-        let msg = Printf.sprintf "law %s failed (%d cases) for %s" name n (pp i) in
+        let msg = Printf.sprintf "law %s failed on %d cases. Ex: %s" name n (pp i) in
         raise (LawFailed msg)
