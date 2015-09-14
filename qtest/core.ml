@@ -4,7 +4,7 @@
  *)
 
 (**** TOOLKIT ****)
-module M = Misclex;;
+module M = Misclex
 let fpf = Printf.fprintf let va  = Printf.sprintf
 let epf = Printf.eprintf let eps  = prerr_string
 let pl  = print_endline
@@ -27,21 +27,26 @@ let (@@) f x = f x
 let soi = string_of_int
 (** Convert a [char] to a [string] *)
 let soc  = String.make 1
-let is_blank_char = function ' '|'\t'|'\n'|'\r' -> true | _ -> false 
+let is_blank_char = function ' '|'\t'|'\n'|'\r' -> true | _ -> false
 let listiteri f l = let c = ref (-1) in let call x = incr c; f !c x in
   List.iter call l
 let lex_str lexer s = (* use an ocamllex lexer *)
   let buff = Lexing.from_string s in lexer buff
 let trim = lex_str M.trim
 and normalise = lex_str M.normalise
+let first_chars s n =
+  let len = min n (String.length s) in String.sub s 0 len
+let string_after s n =
+  let len = String.length s - n in
+  String.sub s n len
 let snippet s n =
-  if String.length s <= n then s else Str.first_chars s n ^ "..."
+  if String.length s <= n then s else first_chars s n ^ "..."
 let snip lex = (** Snippet of current lexer buffer context *)
   let curr = max 0 (lex.Lexing.lex_start_pos - 5) in
-  let vicinity = Str.string_after lex.Lexing.lex_buffer curr
+  let vicinity = string_after lex.Lexing.lex_buffer curr
   in snippet vicinity 70
 (*****************)
- 
+
 (** output channel *)
 let outc = ref stdout
 (** main output function *)
@@ -102,7 +107,7 @@ type kind =
 (** a test : several statements *)
 type 'a test = {
   header : 'a ; (* bindings or metabindings *)
-  kind : kind ; 
+  kind : kind ;
   line : int ;  (* header line number *)
   source : string ; (* original source file *)
   statements : statement list ; (* test code *)
@@ -142,7 +147,7 @@ exception Invalid_pragma of string
 let str_of_metabinding (bind:metabinding) =
   let targets,alias = bind in String.concat ", " targets ^
   if List.length targets > 1 || List.hd targets <> alias then " as " ^ alias else ""
-    
+
 let str_of_binding ((f,a):binding) = str_of_metabinding ([f],a)
 
 (** lexical closure generation, single binding *)
@@ -173,7 +178,7 @@ let headers_of_metaheader (mh:metaheader) =
   in match mh.mhb with
   | [] ->  [{hb = []; hpar = mh.mhpar}]
   | l -> ((List.map (fun b-> {hb = b; hpar = mh.mhpar}) (z l)) : header list)
-  
+
 (** break down metatests (tests w/ multiple targets) and enforce that each
   test is non-empty, ie. has at least one statement.
   Also, put the statements back in the order they appear in *)
@@ -207,19 +212,19 @@ let retain_test test = match !_run_only with
 (** execute a pragma; in particular, output the executable version of a test *)
 let process uid = function
   | Test test when retain_test test  ->
-    let test_handle = test_handle_of_uid uid 
+    let test_handle = test_handle_of_uid uid
     and targets = targets_of_header test.header in
     List.iter (fun t->
       outf_target "%30s %4d    %s\n" test.source test.line t
     ) targets;
     outf "let %s = %S >::: [\n" test_handle (get_test_name test);
     (* handle individual statements *)
-    let do_statement st = 
+    let do_statement st =
       let location = va "%s:%d" test.source st.ln in
       let extended_name = va "\"%s\"" (* pretty, detailed name for the test *)
-        (String.escaped location^":  "^String.escaped (prettify st.code)) 
+        (String.escaped location^":  "^String.escaped (prettify st.code))
       and lnumdir = va "\n#%d \"%s\"\n" st.ln test.source in
-      let bind = lnumdir ^ code_of_bindings test.header.hb 
+      let bind = lnumdir ^ code_of_bindings test.header.hb
       in match test.kind with
       | Simple -> outf
         "\"%s\" >:: (%s fun () -> OUnit.assert_bool %s (%s%s%s));\n"
@@ -294,7 +299,7 @@ let rec shuffle = function
     then List.map shuffle il else List.map shuffle (durstenfeld il))
   | Env _ -> assert false
 
-       
+
 let exec suite =
 (*   assert (!suite = output (input !suite)); *)
   suite := output @@ shuffle (input !suite)

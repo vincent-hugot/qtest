@@ -17,7 +17,7 @@ let (==>) b1 b2 = if b1 then b2 else true (* could use too => *)
 module Gen = struct
   type 'a t = RS.t -> 'a
 
-  let return x st = x
+  let return x _st = x
 
   let (>>=) gen f st =
     f (gen st) st
@@ -36,7 +36,7 @@ let choose l = match l with
         let gen, _ = a.(RS.int st (Array.length a)) in
         gen st), print
 
-let ug st = ()
+let ug _st = ()
 
 let bg st = RS.bool st
 
@@ -71,15 +71,15 @@ let uig st = if RS.bool st then - (upos st) - 1 else upos st
 
 let random_binary_string st length =
   (* 0b011101... *)
-  let s = String.create (length + 2) in
-  s.[0] <- '0';
-  s.[1] <- 'b';
+  let s = Bytes.create (length + 2) in
+  Bytes.set s 0 '0';
+  Bytes.set s 1 'b';
   for i = 0 to length - 1 do
-    s.[i+2] <- if RS.bool st then '0' else '1'
+    Bytes.set s (i+2) (if RS.bool st then '0' else '1')
   done;
-  s
+  Bytes.unsafe_to_string s
 
-let ui32g st = Int32.of_string (random_binary_string st 32)  
+let ui32g st = Int32.of_string (random_binary_string st 32)
 let ui64g st = Int64.of_string (random_binary_string st 64)
 
 let lg_size size gen st =
@@ -99,28 +99,28 @@ let cg st = char_of_int (RS.int st 255)
 
 let printable_chars =
   let l = 126-32+1 in
-  let s = String.create l in
+  let s = Bytes.create l in
   for i = 0 to l-2 do
-    s.[i] <- char_of_int (32+i)
+    Bytes.set s i (char_of_int (32+i))
   done;
-  s.[l-1] <- '\n';
-  s
+  Bytes.set s (l-1) '\n';
+  Bytes.unsafe_to_string s
 
 let printable st = printable_chars.[RS.int st (String.length printable_chars)]
 let numeral st = char_of_int (48 + RS.int st 10)
 
 let sg_size ?(gen = cg) size st =
-  let s = String.create (size st) in
+  let s = Bytes.create (size st) in
   for i = 0 to String.length s - 1 do
-    s.[i] <- gen st
+    Bytes.set s i (gen st)
   done;
-  s
+  Bytes.unsafe_to_string s
 let sg ?gen st = sg_size ?gen nng st
 
 
 (* corner cases *)
 
-let graft_corners gen corners () = 
+let graft_corners gen corners () =
   let cors = ref corners in fun st ->
     match !cors with [] -> gen st
     | e::l -> cors := l; e
@@ -152,7 +152,7 @@ let pos_int = (upos, string_of_int)
 let small_int = (nng, string_of_int)
 let small_int_corners () = (nng_corners (), string_of_int)
 let neg_int = (neg_ig, string_of_int)
-  
+
 let int32 = (ui32g, fun i -> Int32.to_string i ^ "l")
 let int64 = (ui64g, fun i -> Int64.to_string i ^ "L")
 
@@ -191,6 +191,7 @@ let option (g1, p1) =
     | Some x -> "Some " ^ p1 x in
   (g, p)
 
+(* TODO: explain black magic in this!! *)
 let fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print =
   fun (_g1, p1) (g2, p2) ->
     let magic_object = Obj.magic (object end) in
@@ -216,6 +217,7 @@ let fun2 gp1 gp2 gp3 = fun1 gp1 (fun1 gp2 gp3)
 
 (* Generator combinators *)
 
+(* TODO expose in .mli, maybe after wrapping with printer? *)
 
 (** given a list, returns generator that picks at random from list *)
 let oneofl xs () =
@@ -262,7 +264,7 @@ let rec laws iter gen func st =
 
 (** like [laws], but executes all tests anyway and returns optionally the
   smallest failure-causing input, wrt. some measure *)
-let rec laws_smallest measure iter gen func st =
+let laws_smallest measure iter gen func st =
   let return = ref None in
   let register input =
     match !return with
@@ -272,7 +274,7 @@ let rec laws_smallest measure iter gen func st =
       if measure input < measure x then
       return := Some input
   in
-  for i = 1 to iter do
+  for _i = 1 to iter do
     let input = gen st in
     try if not (func input) then register input
     with _ -> register input
@@ -302,6 +304,7 @@ let statistic xs =
   let totals = sum_int (List.map fst stat_num) in
   List.map (fun (i, v) -> ((i * 100) / totals), v) stat_num
 
+(* TODO: expose in .mli? document *)
 let laws2 iter func gen =
   let res = foldn ~init:[] iter
     ~f:(fun acc _ -> let n = gen () in (n, func n) :: acc)
