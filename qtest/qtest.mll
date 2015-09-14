@@ -150,6 +150,7 @@ and lexinjectcp b = parse
    let code = B.contents b in B.clear b;
    register @@ Inject (info lexbuf,code) }
 
+(* TODO: eliminate comments *)
 (** body of an injection pragma: move *)
 and lexinjectmv b = parse
 | _ as c {

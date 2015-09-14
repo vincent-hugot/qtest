@@ -10,6 +10,18 @@ module RS = Random.State
 let rec foldn ~f ~init:acc i =
   if i = 0 then acc else foldn ~f ~init:(f acc i) (i-1)
 
+let _opt_map ~f = function
+  | None -> None
+  | Some x -> Some (f x)
+
+let _opt_map_2 ~f a b = match a, b with
+  | Some x, Some y -> Some (f x y)
+  | _ -> None
+
+let _opt_map_3 ~f a b c = match a, b, c with
+  | Some x, Some y, Some z -> Some (f x y z)
+  | _ -> None
+
 let sum_int = List.fold_left (+) 0
 
 let (==>) b1 b2 = if b1 then b2 else true (* could use too => *)
@@ -22,19 +34,6 @@ module Gen = struct
   let (>>=) gen f st =
     f (gen st) st
 end
-
-
-(* Value generators *)
-type 'a gen = 'a Gen.t
-
-let choose l = match l with
-  | [] -> raise (Invalid_argument "quickcheck.choose")
-  | l ->
-      let a = Array.of_list l in
-      let print = snd a.(0) in
-      (fun st ->
-        let gen, _ = a.(RS.int st (Array.length a)) in
-        gen st), print
 
 let ug _st = ()
 
@@ -136,32 +135,90 @@ let pp_triple p1 p2 p3 (t1,t2,t3) = "(" ^ p1 t1 ^ ", " ^ p2 t2 ^ ", " ^ p3 t3 ^ 
 
 
 
-(* Generator * pretty-printer pairs *)
+(* arbitrary instances *)
 
-type 'a gen_print = 'a Gen.t * ('a -> string)
-let unit : unit gen_print = (ug, fun _ -> "()")
+type 'a arbitrary = <
+  gen: 'a Gen.t;
+  print: ('a -> string) option; (** print values *)
+  small: ('a -> int) option;  (** size of example *)
+  shrink: ('a -> 'a list) option;  (** shrink to smaller examples *)
+  collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 
-let bool = (bg, string_of_bool)
+  set_print: ('a -> string) -> 'a arbitrary;
+  set_small: ('a -> int) -> 'a arbitrary;
+  set_shrink: ('a -> 'a list) -> 'a arbitrary;
+  set_collect: ('a -> string) -> 'a arbitrary;
+>
 
-let float = (fg, string_of_float)
-let pos_float = (pfg, string_of_float)
-let neg_float = (nfg, string_of_float)
+class ['a] base_arbitrary ?print ?small ?shrink ?collect gen = object
+  method gen: 'a Gen.t = gen
+  val _print : ('a -> string) option = print
+  val _small : ('a -> int) option = small
+  val _shrink : ('a -> 'a list) option = shrink
+  val _collect : ('a -> string) option = collect
+  method print = _print
+  method small = _small
+  method shrink = _shrink
+  method collect = _collect
 
-let int = (uig, string_of_int)
-let pos_int = (upos, string_of_int)
-let small_int = (nng, string_of_int)
-let small_int_corners () = (nng_corners (), string_of_int)
-let neg_int = (neg_ig, string_of_int)
+  method set_print f = {< _print = Some f >}
+  method set_small f = {< _small = Some f >}
+  method set_shrink f = {< _shrink = Some f >}
+  method set_collect f = {< _collect = Some f >}
+end
 
-let int32 = (ui32g, fun i -> Int32.to_string i ^ "l")
-let int64 = (ui64g, fun i -> Int64.to_string i ^ "L")
+let set_small f o = o#set_small f
+let set_print f o = o#set_print f
+let set_shrink f o = o#set_shrink f
+let set_collect f o = o#set_collect f
 
-let char = (cg, sprintf "%C")
-let printable_char = (printable, sprintf "%C")
-let numeral_char = (numeral, sprintf "%C")
 
-let string_gen_of_size size gen = (sg_size ~gen size, sprintf "%S")
-let string_gen gen = (sg ~gen, sprintf "%S")
+let small1 _ = 1
+let shrink_nil _ = []
+
+let make ?print ?small ?shrink ?collect gen =
+  new base_arbitrary ?print ?small ?shrink ?collect gen
+
+let make_scalar ?print ?collect gen =
+  make ~shrink:shrink_nil ~small:small1 ?print ?collect gen
+
+let adapt_ o gen =
+  make ?print:o#print ?small:o#small ?shrink:o#shrink ?collect:o#collect gen
+
+let choose l = match l with
+  | [] -> raise (Invalid_argument "quickcheck.choose")
+  | l ->
+      let a = Array.of_list l in
+      adapt_ a.(0)
+        (fun st ->
+          let arb = a.(RS.int st (Array.length a)) in
+          arb#gen st)
+
+let unit : unit arbitrary =
+  make ~small:small1 ~shrink:shrink_nil ~print:(fun _ -> "()") ug
+
+let bool = make_scalar ~print:string_of_bool bg
+let float = make_scalar ~print:string_of_float fg
+let pos_float = make_scalar ~print:string_of_float pfg
+let neg_float = make_scalar ~print:string_of_float nfg
+
+let int = make_scalar ~print:string_of_int uig
+let pos_int = make_scalar ~print:string_of_int upos
+let small_int = make_scalar ~print:string_of_int nng
+let small_int_corners () = make_scalar ~print:string_of_int (nng_corners ())
+let neg_int = make_scalar ~print:string_of_int neg_ig
+
+let int32 = make_scalar ~print:(fun i -> Int32.to_string i ^ "l") ui32g
+let int64 = make_scalar ~print:(fun i -> Int64.to_string i ^ "L") ui64g
+
+let char = make_scalar ~print:(sprintf "%C") cg
+let printable_char = make_scalar ~print:(sprintf "%C") printable
+let numeral_char = make_scalar ~print:(sprintf "%C") numeral
+
+let string_gen_of_size size gen =
+  make ~small:String.length ~print:(sprintf "%S") (sg_size ~gen size)
+let string_gen gen =
+  make ~small:String.length ~print:(sprintf "%S") (sg ~gen)
 
 let string = string_gen cg
 let string_of_size size = string_gen_of_size size cg
@@ -172,30 +229,91 @@ let printable_string_of_size size = string_gen_of_size size printable
 let numeral_string = string_gen numeral
 let numeral_string_of_size size = string_gen_of_size size numeral
 
-let list (gen,pp) = (lg gen, pp_list pp)
-let list_of_size size (gen,pp) = (lg_size size gen, pp_list pp)
+let shrink_list_ l =
+  let rec remove_one l r = match r with
+    | [] -> []
+    | x :: tail -> (List.rev_append l r) :: remove_one (x :: l) tail
+  in
+  remove_one [] l
 
-let array (gen,pp) = (ag gen, pp_array pp)
-let array_of_size size (gen,pp) = (ag_size size gen, pp_array pp)
+let list a =
+  let print = _opt_map a#print ~f:pp_list in
+  make
+    ~small:List.length
+    ~shrink:shrink_list_
+    ?print
+    (lg a#gen)
 
-let pair (g1,p1) (g2,p2) = (pg g1 g2, pp_pair p1 p2)
-let triple (g1,p1) (g2,p2) (g3,p3) = (tg g1 g2 g3, pp_triple p1 p2 p3)
+let list_of_size size a =
+  let print = _opt_map a#print ~f:pp_list in
+  make
+    ~small:List.length
+    ~shrink:shrink_list_
+    ?print
+    (lg_size size a#gen)
 
-let option (g1, p1) =
-  let g st =
+let shrink_array_ a =
+  let b = Array.init (Array.length a)
+    (fun i ->
+      Array.init (Array.length a-1)
+        (fun j -> if j<i then a.(j) else a.(j-1))
+    ) in
+  Array.to_list b
+
+let array a =
+  make
+    ~small:Array.length
+    ~shrink:shrink_array_
+    ?print:(_opt_map ~f:pp_array a#print)
+    (ag a#gen)
+
+let array_of_size size a =
+  make
+    ~small:Array.length
+    ~shrink:shrink_array_
+    ?print:(_opt_map ~f:pp_array a#print)
+    (ag_size size a#gen)
+
+(* TODO: add shrinking *)
+
+let pair a b =
+  make
+    ?small:(_opt_map_2 ~f:(fun f g (x,y) -> f x+g y) a#small b#small)
+    ?print:(_opt_map_2 ~f:pp_pair a#print b#print)
+    (pg a#gen b#gen)
+
+let triple a b c =
+  make
+    ?small:(_opt_map_3 ~f:(fun f g h (x,y,z) -> f x+g y+h z) a#small b#small c#small)
+    ?print:(_opt_map_3 ~f:pp_triple a#print b#print c#print)
+    (tg a#gen b#gen c#gen)
+
+let option a =
+  let some_ x = Some x in
+  let g f st =
     let p = RS.float st 1. in
     if p < 0.15 then None
-    else Some (g1 st) in
-  let p = function
+    else Some (f st)
+  and p f = function
     | None -> "None"
-    | Some x -> "Some " ^ p1 x in
-  (g, p)
+    | Some x -> "Some " ^ f x
+  and small =
+    _opt_map ~f:(fun f o -> match o with None -> 0 | Some x -> f x) a#small
+  and shrink =
+    _opt_map a#shrink
+    ~f:(fun f o -> match o with None -> [] | Some x -> List.map some_ (f x))
+  in
+  make
+    ?small
+    ?shrink
+    ?print:(_opt_map ~f:p a#print)
+    (g a#gen)
 
 (* TODO: explain black magic in this!! *)
-let fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print =
-  fun (_g1, p1) (g2, p2) ->
+let fun1 : 'a arbitrary -> 'b arbitrary -> ('a -> 'b) arbitrary =
+  fun a1 a2 ->
     let magic_object = Obj.magic (object end) in
-    let gen : ('a -> 'b) gen = fun st ->
+    let gen : ('a -> 'b) Gen.t = fun st ->
       let h = Hashtbl.create 10 in
       fun x ->
         if x == magic_object then
@@ -203,49 +321,76 @@ let fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print =
         else
           try Hashtbl.find h x
           with Not_found ->
-            let b = g2 st in
+            let b = a2#gen st in
             Hashtbl.add h x b;
             b in
-    let pp : ('a -> 'b) -> string = fun f ->
+    let pp : (('a -> 'b) -> string) option = _opt_map_2 a1#print a2#print ~f:(fun p1 p2 f ->
       let h : ('a, 'b) Hashtbl.t = Obj.magic (f magic_object) in
       let b = Buffer.create 20 in
       Hashtbl.iter (fun key value -> Printf.bprintf b "%s -> %s; " (p1 key) (p2 value)) h;
-      "{" ^ Buffer.contents b ^ "}" in
-    gen, pp
+      "{" ^ Buffer.contents b ^ "}"
+    ) in
+    make
+      ?print:pp
+      gen
 
 let fun2 gp1 gp2 gp3 = fun1 gp1 (fun1 gp2 gp3)
 
 (* Generator combinators *)
 
-(* TODO expose in .mli, maybe after wrapping with printer? *)
-
 (** given a list, returns generator that picks at random from list *)
-let oneofl xs () =
-  List.nth xs (Random.int (List.length xs))
+let oneofl ?print ?collect xs =
+  let gen st = List.nth xs (Random.State.int st (List.length xs)) in
+  make ?print ?collect gen
 
 (** Given a list of generators, returns generator that randomly uses one of the generators
     from the list *)
-let oneof xs =
-  List.nth xs (Random.int (List.length xs))
+let oneof l =
+  let gens = List.map (fun a->a#gen) l in
+  let gen st = List.nth gens (Random.State.int st (List.length gens)) st in
+  let first = List.hd l in
+  let print = first#print
+  and small = first#small
+  and collect = first#collect
+  and shrink = first#shrink in
+  make ?print ?small ?collect ?shrink gen
 
 (** Generator that always returns given value *)
-let always x () = x
+let always ?print x =
+  let gen _st = x in
+  make ?print gen
 
-(** Given list of [(frequency,value)] pairs, returns value with probability proportional
-    to given frequency *)
-let frequency xs =
-  let sums = sum_int (List.map fst xs) in
-  let i = Random.int sums in
+let gfreq l st =
+  let sums = sum_int (List.map fst l) in
+  let i = Random.State.int st sums in
   let rec aux acc = function
     | ((x,g)::xs) -> if i < acc+x then g else aux (acc+x) xs
     | _ -> failwith "frequency"
   in
-  aux 0 xs
+  aux 0 l
+
+(** Given list of [(frequency,value)] pairs, returns value with probability proportional
+    to given frequency *)
+let frequency ?print ?collect l =
+  make ?print ?collect (gfreq l)
 
 (** like frequency, but returns generator *)
-let frequencyl l = frequency (List.map (fun (i,e) -> (i,always e)) l)
+let frequencyl l =
+  let gen st = let a = gfreq l st in a#gen st in
+  let first = snd (List.hd l) in
+  make ?print:first#print ?collect:first#collect
+    ?small:first#small ?shrink:first#shrink gen
 
+let map ?rev f a =
+  make
+    ?print:(_opt_map_2 rev a#print ~f:(fun r p x -> p (r x)))
+    ?small:(_opt_map_2 rev a#small ~f:(fun r s x -> s (r x)))
+    ?shrink:(_opt_map_2 rev a#shrink ~f:(fun r g x -> List.map f @@ g (r x)))
+    ?collect:(_opt_map_2 rev a#collect ~f:(fun r f x -> f (r x)))
+    (fun st -> f (a#gen st))
 
+let map_same_type f a =
+  adapt_ a (fun st -> f (a#gen st))
 
 (* Laws *)
 
@@ -281,17 +426,28 @@ let laws_smallest measure iter gen func st =
   done;
   !return
 
+(* TODO: redefine [==>]; if assumption failed, try to generate new one
+   but set limit to, say, 1000 *)
+
+(* TODO: shrinking if available; otherwise use smallest if small defined *)
 
 let default_count = 100
 
+exception LawFailed of string
+
+let no_print_ _ = "<no printer>"
+
 (** Like laws, but throws an exception instead of returning an option.  *)
-let laws_exn ?small ?(count=default_count) name (gen,pp) func st =
-  let result = match small with
-  | None -> laws count gen func st
-  | Some measure -> laws_smallest measure count gen func st
+let laws_exn ?(count=default_count) name a func st =
+  let result = match a#small with
+  | None -> laws count a#gen func st
+  | Some measure -> laws_smallest measure count a#gen func st
   in match result with
     | None -> ()
-    | Some i -> failwith (Printf.sprintf "law %s failed for %s" name (pp i))
+    | Some i ->
+        let pp = match a#print with None -> no_print_ | Some x -> x in
+        let msg = Printf.sprintf "law %s failed for %s" name (pp i) in
+        raise (LawFailed msg)
 
 let rec statistic_number = function
   | []    -> []

@@ -11,119 +11,142 @@ module Gen : sig
   val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
 end
 
-type 'a gen = 'a Gen.t
+type 'a arbitrary = <
+  gen: 'a Gen.t;
+  print: ('a -> string) option; (** Print values *)
+  small: ('a -> int) option;  (** Size of example *)
+  shrink: ('a -> 'a list) option;  (** Shrink to smaller examples *)
+  collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 
-type 'a gen_print = 'a gen * ('a -> string)
-(** a value of type ['a gen_print] is a pair where the first
-    component generates random value of type ['a] and the
-    second component can print them.
+  set_print: ('a -> string) -> 'a arbitrary;
+  set_small: ('a -> int) -> 'a arbitrary;
+  set_shrink: ('a -> 'a list) -> 'a arbitrary;
+  set_collect: ('a -> string) -> 'a arbitrary;
+>
+(** a value of type ['a arbitrary] is an object with a method for generating random
+    values of type ['a], and additional methods to compute the size of values,
+    print them, and possibly shrink them into smaller counterexamples
 *)
 
-val choose : 'a gen_print list -> 'a gen_print
+val make :
+  ?print:('a -> string) ->
+  ?small:('a -> int) ->
+  ?shrink:('a -> 'a list) ->
+  ?collect:('a -> string) ->
+  'a Gen.t -> 'a arbitrary
+(** Builder for arbitrary. Default is to only have a generator, but other
+    arguments can be added *)
+
+val set_print : ('a -> string) -> 'a arbitrary -> 'a arbitrary
+val set_small : ('a -> int) -> 'a arbitrary -> 'a arbitrary
+val set_shrink : ('a -> 'a list) -> 'a arbitrary -> 'a arbitrary
+val set_collect : ('a -> string) -> 'a arbitrary -> 'a arbitrary
+
+val choose : 'a arbitrary list -> 'a arbitrary
 (** Choose among the given list of generators. The list must not
   be empty; if it is Invalid_argument is raised. *)
 
-val unit : unit gen_print
+val unit : unit arbitrary
 (** always generates [()], obviously. *)
 
-val bool : bool gen_print
+val bool : bool arbitrary
 (** uniform boolean generator *)
 
-val float : float gen_print
+val float : float arbitrary
 (* FIXME: does not generate nan nor infinity I think *)
 (** generates regular floats (no nan and no infinities) *)
 
-val pos_float : float gen_print
+val pos_float : float arbitrary
 (** positive float generator (no nan and no infinities) *)
 
-val neg_float : float gen_print
+val neg_float : float arbitrary
 (** negative float generator (no nan and no infinities) *)
 
-val int : int gen_print
+val int : int arbitrary
 (** int generator. Uniformly distributed *)
 
-val int32 : int32 gen_print
+val int32 : int32 arbitrary
 (** int32 generator. Uniformly distributed *)
 
-val int64 : int64 gen_print
+val int64 : int64 arbitrary
 (** int generator. Uniformly distributed *)
 
-val pos_int : int gen_print
+val pos_int : int arbitrary
 (** positive int generator. Uniformly distributed *)
 
-val small_int : int gen_print
+val small_int : int arbitrary
 (** positive int generator. The probability that a number is chosen
     is roughly an exponentially decreasing function of the number.
 *)
 
-val small_int_corners : unit -> int gen_print
+val small_int_corners : unit -> int arbitrary
 (** As [small_int], but each newly created generator starts with
  a list of corner cases before falling back on random generation. *)
 
-val neg_int : int gen_print
+val neg_int : int arbitrary
 (** negative int generator. The distribution is similar to that of
     [small_int], not of [pos_int].
 *)
 
-val char : char gen_print
+val char : char arbitrary
 (** Uniformly distributed on all the chars (not just ascii or
     valid latin-1) *)
 
-val printable_char : char gen_print
+val printable_char : char arbitrary
 (* FIXME: describe which subset *)
 (** uniformly distributed over a subset of chars *)
 
-val numeral_char : char gen_print
+val numeral_char : char arbitrary
 (** uniformy distributed over ['0'..'9'] *)
 
-val string_gen_of_size : int gen -> char gen -> string gen_print
+val string_gen_of_size : int Gen.t -> char Gen.t -> string arbitrary
 
-val string_gen : char gen -> string gen_print
+val string_gen : char Gen.t -> string arbitrary
 (** generates strings with a distribution of length of [small_int] *)
 
-val string : string gen_print
+val string : string arbitrary
 (** generates strings with a distribution of length of [small_int]
     and distribution of characters of [char] *)
 
-val string_of_size : int gen -> string gen_print
+val string_of_size : int Gen.t -> string arbitrary
 (** generates strings with distribution of characters if [char] *)
 
-val printable_string : string gen_print
+val printable_string : string arbitrary
 (** generates strings with a distribution of length of [small_int]
     and distribution of characters of [printable_char] *)
 
-val printable_string_of_size : int gen -> string gen_print
+val printable_string_of_size : int Gen.t -> string arbitrary
 (** generates strings with distribution of characters of [printable_char] *)
 
-val numeral_string : string gen_print
+val numeral_string : string arbitrary
 (** generates strings with a distribution of length of [small_int]
     and distribution of characters of [numeral_char] *)
 
-val numeral_string_of_size : int gen -> string gen_print
+val numeral_string_of_size : int Gen.t -> string arbitrary
 (** generates strings with a distribution of characters of [numeral_char] *)
 
-val list : 'a gen_print -> 'a list gen_print
+val list : 'a arbitrary -> 'a list arbitrary
 (** generates lists with length generated by [small_int] *)
 
-val list_of_size : int gen -> 'a gen_print -> 'a list gen_print
+val list_of_size : int Gen.t -> 'a arbitrary -> 'a list arbitrary
 (** generates lists with length from the given distribution *)
 
-val array : 'a gen_print -> 'a array gen_print
+val array : 'a arbitrary -> 'a array arbitrary
 (** generates arrays with length generated by [small_int] *)
 
-val array_of_size : int gen -> 'a gen_print -> 'a array gen_print
+val array_of_size : int Gen.t -> 'a arbitrary -> 'a array arbitrary
 (** generates arrays with length from the given distribution *)
 
-val pair : 'a gen_print -> 'b gen_print -> ('a * 'b) gen_print
+val pair : 'a arbitrary -> 'b arbitrary -> ('a * 'b) arbitrary
 (** combines two generators into a generator of pairs *)
 
-val triple : 'a gen_print -> 'b gen_print -> 'c gen_print -> ('a * 'b * 'c) gen_print
+val triple : 'a arbitrary -> 'b arbitrary -> 'c arbitrary -> ('a * 'b * 'c) arbitrary
 (** combines three generators into a generator of 3-uples *)
 
-val option : 'a gen_print -> 'a option gen_print
+val option : 'a arbitrary -> 'a option arbitrary
 (** choose between returning Some random value, or None *)
 
-val fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print
+val fun1 : 'a arbitrary -> 'b arbitrary -> ('a -> 'b) arbitrary
 (** generator of functions of arity 1.
     The functions are always pure and total functions:
     - when given the same argument (as decided by Pervasives.(=)), it returns the same value
@@ -131,27 +154,52 @@ val fun1 : 'a gen_print -> 'b gen_print -> ('a -> 'b) gen_print
     The functions generated are really printable.
 *)
 
-val fun2 : 'a gen_print -> 'b gen_print -> 'c gen_print -> ('a -> 'b -> 'c) gen_print
+val fun2 : 'a arbitrary -> 'b arbitrary -> 'c arbitrary -> ('a -> 'b -> 'c) arbitrary
 (** generator of functions of arity 2. The remark about [fun1] also apply
     here.
 *)
 
+val oneofl : ?print:('a -> string) -> ?collect:('a -> string) ->
+             'a list -> 'a arbitrary
+(** Pick an element randomly in the list *)
+
+val oneof : 'a arbitrary list -> 'a arbitrary
+(** Pick a generator among the list, randomly *)
+
+val always : ?print:('a -> string) -> 'a -> 'a arbitrary
+(** Always return the same element *)
+
+val frequency : ?print:('a -> string) -> ?collect:('a -> string) ->
+                (int * 'a) list -> 'a arbitrary
+(** Same as {!oneofl}, but each element is paired with its frequency in
+    the probability distribution (the higher, the more likely) *)
+
+val frequencyl : (int * 'a arbitrary) list -> 'a arbitrary
+(** Similar to {!oneof} but with frequencies *)
+
+val map : ?rev:('b -> 'a) -> ('a -> 'b) -> 'a arbitrary -> 'b arbitrary
+(** [map f a] returns a new arbitrary instance that generates values using
+    [a#gen] and then transforms them through [f].
+    @param rev if provided, maps values back to type ['a] so that the printer,
+      shrinker, etc. of [a] can be used
+*)
+
+val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
+(** Specialization of [map] when the transformation preserves the type, which
+   makes shrinker, printer, etc. still relevant *)
+
+exception LawFailed of string
+
 val laws_exn :
-  ?small:('a -> int) ->
   ?count:int ->
-  string -> 'a gen_print -> ('a -> bool) -> Random.State.t -> unit
- (** [laws_exn ?small ?count name gen law st] generates up to [count] random
-     values of type ['a] with using [gen] and the random state [st]. The
+  string -> 'a arbitrary -> ('a -> bool) -> Random.State.t -> unit
+ (** [laws_exn ?small ?count name arbitrary law st] generates up to [count] random
+     values of type ['a] with using [arbitrary] and the random state [st]. The
      predicate [law] is called on them and if it returns [false] or raises an
      exception then we have a counter example for the [law].
-
-     If [small] is given, then some other random values are generated and the
-     smallest one (where compare [example1] [example2] is defined as
-     [Pervasives.compare (small (example1)) (small (example2))]) is kept.
 
      If [small] is not given, then the generations stop at the first counter
      example.
 
-     If a counter example has been found, then it an exception that contains
-     the stringified example is thrown.
+     @raise LawFailed if a counter example has been found, containing the stringified example
  *)
