@@ -133,20 +133,22 @@ module Tree = struct
     | Leaf _ -> 1
     | Node (x,y) -> 1 + size x + size y
 
+  (*$< Tree *)
+
   (*$inject
   let rec print = function
-    | Tree.Leaf x -> string_of_int x
-    | Tree.Node(x,y) -> Printf.sprintf "Node(%s, %s)" (print x)(print y)
+    | Leaf x -> string_of_int x
+    | Node(x,y) -> Printf.sprintf "Node(%s, %s)" (print x)(print y)
 
   let shrink = function
-    | Tree.Leaf _ -> []
-    | Tree.Node (x,y) -> [x;y]
+    | Leaf _ -> []
+    | Node (x,y) -> [x;y]
 
   let gen = Q.Gen.(sized @@ fix (fun self n -> match n with
-    | 0 -> lift Tree.leaf nat
+    | 0 -> lift leaf nat
     | n ->
-        frequency [1, lift Tree.leaf nat;
-                   3, lift2 Tree.node (self (n/2)) (self (n/2))]
+        frequency [1, lift leaf nat;
+                   3, lift2 node (self (n/2)) (self (n/2))]
   ))
 
   let arb_tree = Q.make ~small:Tree.size ~shrink ~print gen
@@ -157,10 +159,12 @@ module Tree = struct
     | Node (x,y) -> node (rev y) (rev x)
 
   (*$Q
-    arb_tree (fun t -> Tree.rev (Tree.rev t) = t)
-    arb_tree (fun t -> Tree.size t = Tree.size (Tree.rev t))
-    arb_tree (fun t -> (Tree.size t > 1) ==> (t = Tree.rev t))
+    arb_tree (fun t -> rev (rev t) = t)
+    arb_tree (fun t -> size t = size (rev t))
+    arb_tree (fun t -> (size t > 1) ==> (t = rev t))
   *)
+
+  (*$>*)
 end
 
 
