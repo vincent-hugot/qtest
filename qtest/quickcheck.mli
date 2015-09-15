@@ -3,6 +3,7 @@ val (==>) : bool -> bool -> bool
     ie [not b1 || b2] (except that it is strict).
 *)
 
+(** {2 Generate Values} *)
 module Gen : sig
   type 'a t = Random.State.t -> 'a
   (** A random generator for values of type 'a *)
@@ -13,9 +14,9 @@ module Gen : sig
   val return : 'a -> 'a t
   val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
   val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
-  val lift : ('a -> 'b) -> 'a t -> 'b t
-  val lift2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-  val lift3 : ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
+  val map : ('a -> 'b) -> 'a t -> 'b t
+  val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+  val map3 : ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
 
   val oneof : 'a t list -> 'a t
   val oneofl : 'a list -> 'a t
@@ -68,11 +69,11 @@ module Gen : sig
 
   let g = Quickcheck.Gen.(sized @@ fix
     (fun self n st -> match n with
-      | 0 -> lift leaf nat st
+      | 0 -> map leaf nat st
       | n ->
         frequency
-          [1, lift leaf nat;
-           2, lift2 node (self (n/2)) (self (n/2))]
+          [1, map leaf nat;
+           2, map2 node (self (n/2)) (self (n/2))]
            st
       ))
 
@@ -81,13 +82,61 @@ module Gen : sig
   *)
 end
 
-type 'a iterator = unit -> 'a option
+(** {2 Show Values} *)
+module Print : sig
+  type 'a t = 'a -> string
+
+  val int : int t
+  val bool : bool t
+  val float : float t
+  val char : char t
+  val string : string t
+
+  val pair : 'a t -> 'b t -> ('a*'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a*'b*'c) t
+  val quad : 'a t -> 'b t -> 'c t -> 'd t -> ('a*'b*'c*'d) t
+
+  val list : 'a t -> 'a list t
+  val array : 'a t -> 'a array t
+end
+
+module Iter : sig
+  type 'a t = ('a -> unit) -> unit
+
+  val empty : 'a t
+  val return : 'a -> 'a t
+  val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
+  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+  val map : ('a -> 'b) -> 'a t -> 'b t
+  val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
+  val of_list : 'a list -> 'a t
+  val of_array : 'a array -> 'a t
+  val pair : 'a t -> 'b t -> ('a * 'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
+  val find : ('a -> bool) -> 'a t -> 'a option
+end
+
+(** {2 Shrink Values} *)
+module Shrink : sig
+  type 'a t = 'a -> 'a Iter.t
+
+  val nil : 'a t
+  (** No shrink *)
+
+  val string : string t
+  val array : ?shrink:'a t -> 'a array t
+  val list : ?shrink:'a t -> 'a list t
+
+  val pair : 'a t -> 'b t -> ('a * 'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
+end
 
 type 'a arbitrary = {
   gen: 'a Gen.t;
   print: ('a -> string) option; (** print values *)
   small: ('a -> int) option;  (** size of example *)
-  shrink: ('a -> 'a iterator) option;  (** shrink to smaller examples *)
+  shrink: ('a -> 'a Iter.t) option;  (** shrink to smaller examples *)
   collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 }
 (** a value of type ['a arbitrary] is an object with a method for generating random
@@ -98,7 +147,7 @@ type 'a arbitrary = {
 val make :
   ?print:('a -> string) ->
   ?small:('a -> int) ->
-  ?shrink:('a -> 'a iterator) ->
+  ?shrink:('a -> 'a Iter.t) ->
   ?collect:('a -> string) ->
   'a Gen.t -> 'a arbitrary
 (** Builder for arbitrary. Default is to only have a generator, but other
@@ -106,7 +155,7 @@ val make :
 
 val set_print : ('a -> string) -> 'a arbitrary -> 'a arbitrary
 val set_small : ('a -> int) -> 'a arbitrary -> 'a arbitrary
-val set_shrink : ('a -> 'a iterator) -> 'a arbitrary -> 'a arbitrary
+val set_shrink : ('a -> 'a Iter.t) -> 'a arbitrary -> 'a arbitrary
 val set_collect : ('a -> string) -> 'a arbitrary -> 'a arbitrary
 
 val choose : 'a arbitrary list -> 'a arbitrary
@@ -244,7 +293,7 @@ val always : ?print:('a -> string) -> 'a -> 'a arbitrary
 (** Always return the same element *)
 
 val frequency : ?print:('a -> string) -> ?small:('a -> int) ->
-                ?shrink:('a -> 'a iterator) -> ?collect:('a -> string) ->
+                ?shrink:('a -> 'a Iter.t) -> ?collect:('a -> string) ->
                 (int * 'a arbitrary) list -> 'a arbitrary
 (** Similar to {!oneof} but with frequencies *)
 

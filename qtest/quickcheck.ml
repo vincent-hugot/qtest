@@ -32,11 +32,6 @@ let _opt_sum a b = match a, b with
   | Some _, _ -> a
   | None, _ -> b
 
-let _iter_nil () = None
-let _iter_map f g () = match g() with
-  | None -> None
-  | Some x -> Some (f x)
-
 let sum_int = List.fold_left (+) 0
 
 exception FailedPrecondition
@@ -54,9 +49,9 @@ module Gen = struct
     f (gen st) st
 
   let (<*>) f x st = f st (x st)
-  let lift f x st = f (x st)
-  let lift2 f x y st = f (x st) (y st)
-  let lift3 f x y z st = f (x st) (y st) (z st)
+  let map f x st = f (x st)
+  let map2 f x y st = f (x st) (y st)
+  let map3 f x y z st = f (x st) (y st) (z st)
 
   let oneof l st = List.nth l (Random.State.int st (List.length l)) st
   let oneofl xs st = List.nth xs (Random.State.int st (List.length xs))
@@ -178,24 +173,133 @@ module Gen = struct
     f'
 end
 
-(* Additional pretty-printers *)
+module Print = struct
+  type 'a t = 'a -> string
 
-let pp_list pp l = "[" ^ (String.concat "; " (List.map pp l)) ^ "]"
-let pp_array pp l = "[|" ^ (String.concat "; " (Array.to_list (Array.map pp l))) ^ "|]"
-let pp_pair p1 p2 (t1,t2) = "(" ^ p1 t1 ^ ", " ^ p2 t2 ^ ")"
-let pp_triple p1 p2 p3 (t1,t2,t3) = "(" ^ p1 t1 ^ ", " ^ p2 t2 ^ ", " ^ p3 t3 ^ ")"
+  let int = string_of_int
+  let bool = string_of_bool
+  let float = string_of_float
+  let string s = s
+  let char c = String.make 1 c
 
+  let pair a b (x,y) = Printf.sprintf "(%s, %s)" (a x) (b y)
+  let triple a b c (x,y,z) = Printf.sprintf "(%s, %s, %s)" (a x) (b y) (c z)
+  let quad a b c d (x,y,z,w) =
+    Printf.sprintf "(%s, %s, %s, %s)" (a x) (b y) (c z) (d w)
 
+  let list pp l =
+    let b = Buffer.create 25 in
+    Buffer.add_char b '[';
+    List.iteri (fun i x ->
+      if i > 0 then Buffer.add_string b "; ";
+      Buffer.add_string b (pp x))
+      l;
+    Buffer.add_char b ']';
+    Buffer.contents b
+
+  let array pp a =
+    let b = Buffer.create 25 in
+    Buffer.add_string b "[|";
+    Array.iteri (fun i x ->
+      if i > 0 then Buffer.add_string b "; ";
+      Buffer.add_string b (pp x))
+      a;
+    Buffer.add_string b "|]";
+    Buffer.contents b
+end
+
+module Iter = struct
+  type 'a t = ('a -> unit) -> unit
+  let empty _ = ()
+  let return x yield = yield x
+  let (<*>) a b yield = a (fun f -> b (fun x ->  yield (f x)))
+  let (>>=) a f yield = a (fun x -> f x yield)
+  let map f a yield = a (fun x -> yield (f x))
+  let map2 f a b yield = a (fun x -> b (fun y -> yield (f x y)))
+  let (>|=) a f = map f a
+  let of_list l yield = List.iter yield l
+  let of_array a yield = Array.iter yield a
+  let pair a b yield = a (fun x -> b(fun y -> yield (x,y)))
+  let triple a b c yield = a (fun x -> b (fun y -> c (fun z -> yield (x,y,z))))
+
+  exception IterExit
+  let find p iter =
+    let r = ref None in
+    (try iter (fun x -> if p x then (r := Some x; raise IterExit))
+     with IterExit -> ()
+    );
+    !r
+end
+
+module Shrink = struct
+  type 'a t = 'a -> 'a Iter.t
+
+  let nil _ = Iter.empty
+
+  let string s yield =
+    for i =0 to String.length s-1 do
+      let s' = Bytes.init (String.length s-1)
+        (fun j -> if j<i then s.[j] else s.[j-1])
+      in
+      yield (Bytes.unsafe_to_string s')
+    done
+
+  let array ?shrink a yield =
+    for i=0 to Array.length a-1 do
+      let a' = Array.init (Array.length a-1)
+        (fun j -> if j< i then a.(j) else a.(j-1))
+      in
+      yield a'
+    done;
+    match shrink with
+    | None -> ()
+    | Some f ->
+        (* try to shrink each element of the array *)
+        for i = 0 to Array.length a - 1 do
+          f a.(i) (fun x ->
+            let b = Array.copy a in
+            b.(i) <- x;
+            yield b
+          )
+        done
+
+  let list ?shrink l yield =
+    let rec aux l r = match r with
+      | [] -> ()
+      | x :: r' ->
+          yield (List.rev_append l r');
+          aux (x::l) r'
+    in
+    aux [] l;
+    match shrink with
+    | None -> ()
+    | Some f ->
+        let rec aux l r = match r with
+          | [] -> ()
+          | x :: r' ->
+              f x (fun x' -> yield (List.rev_append l (x' :: r')));
+              aux (x :: l) r'
+        in
+        aux [] l
+
+  let pair a b (x,y) yield =
+    a x (fun x' -> yield (x',y));
+    b y (fun y' -> yield (x,y'))
+
+  let triple a b c (x,y,z) yield =
+    a x (fun x' -> yield (x',y,z));
+    b y (fun y' -> yield (x,y',z));
+    c z (fun z' -> yield (x,y,z'))
+end
 
 (* arbitrary instances *)
 
-type 'a iterator = unit -> 'a option
 
 type 'a arbitrary = {
   gen: 'a Gen.t;
   print: ('a -> string) option; (** print values *)
   small: ('a -> int) option;  (** size of example *)
-  shrink: ('a -> 'a iterator) option;  (** shrink to smaller examples *)
+  shrink: ('a -> 'a Iter.t) option;  (** shrink to smaller examples *)
   collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 }
 
@@ -213,10 +317,9 @@ let set_shrink f o = {o with shrink=Some f}
 let set_collect f o = {o with collect=Some f}
 
 let small1 _ = 1
-let shrink_nil _ = _iter_nil
 
 let make_scalar ?print ?collect gen =
-  make ~shrink:shrink_nil ~small:small1 ?print ?collect gen
+  make ~shrink:Shrink.nil ~small:small1 ?print ?collect gen
 
 let adapt_ o gen =
   make ?print:o.print ?small:o.small ?shrink:o.shrink ?collect:o.collect gen
@@ -231,7 +334,7 @@ let choose l = match l with
           arb.gen st)
 
 let unit : unit arbitrary =
-  make ~small:small1 ~shrink:shrink_nil ~print:(fun _ -> "()") Gen.unit
+  make ~small:small1 ~shrink:Shrink.nil ~print:(fun _ -> "()") Gen.unit
 
 let bool = make_scalar ~print:string_of_bool Gen.bool
 let float = make_scalar ~print:string_of_float Gen.float
@@ -267,63 +370,43 @@ let printable_string_of_size size = string_gen_of_size size Gen.printable
 let numeral_string = string_gen Gen.numeral
 let numeral_string_of_size size = string_gen_of_size size Gen.numeral
 
-let shrink_list_ l =
-  let st = ref ([], l) in
-  fun () -> match !st with
-    | _, [] -> None
-    | l, x :: tail ->
-        st := (x :: l, tail);
-        Some (List.rev_append l tail)
-
 let list_sum_ f l = List.fold_left (fun acc x-> f x+acc) 0 l
 
 let list a =
   (* small sums sub-sizes if present, otherwise just length *)
   let small = _opt_or a.small ~f:list_sum_ ~d:List.length in
-  let print = _opt_map a.print ~f:pp_list in
+  let print = _opt_map a.print ~f:Print.list in
   make
     ~small
-    ~shrink:shrink_list_
+    ~shrink:(Shrink.list ?shrink:a.shrink)
     ?print
     (Gen.list a.gen)
 
 let list_of_size size a =
   let small = _opt_or a.small ~f:list_sum_ ~d:List.length in
-  let print = _opt_map a.print ~f:pp_list in
+  let print = _opt_map a.print ~f:Print.list in
   make
     ~small
-    ~shrink:shrink_list_
+    ~shrink:(Shrink.list ?shrink:a.shrink)
     ?print
     (Gen.list_size size a.gen)
 
 let array_sum_ f a = Array.fold_left (fun acc x -> f x+acc) 0 a
 
-let shrink_array_ a =
-  let i = ref 0 in
-  fun () ->
-    if !i = Array.length a then None
-    else (
-      let a' = Array.init (Array.length a-1)
-        (fun j -> if j< !i then a.(j) else a.(j-1))
-      in
-      incr i;
-      Some a'
-    )
-
 let array a =
   let small = _opt_or ~d:Array.length ~f:array_sum_ a.small in
   make
     ~small
-    ~shrink:shrink_array_
-    ?print:(_opt_map ~f:pp_array a.print)
+    ~shrink:(Shrink.array ?shrink:a.shrink)
+    ?print:(_opt_map ~f:Print.array a.print)
     (Gen.array a.gen)
 
 let array_of_size size a =
   let small = _opt_or ~d:Array.length ~f:array_sum_ a.small in
   make
     ~small
-    ~shrink:shrink_array_
-    ?print:(_opt_map ~f:pp_array a.print)
+    ~shrink:(Shrink.array ?shrink:a.shrink)
+    ?print:(_opt_map ~f:Print.array a.print)
     (Gen.array_size size a.gen)
 
 (* TODO: add shrinking *)
@@ -331,13 +414,13 @@ let array_of_size size a =
 let pair a b =
   make
     ?small:(_opt_map_2 ~f:(fun f g (x,y) -> f x+g y) a.small b.small)
-    ?print:(_opt_map_2 ~f:pp_pair a.print b.print)
+    ?print:(_opt_map_2 ~f:Print.pair a.print b.print)
     (Gen.pair a.gen b.gen)
 
 let triple a b c =
   make
     ?small:(_opt_map_3 ~f:(fun f g h (x,y,z) -> f x+g y+h z) a.small b.small c.small)
-    ?print:(_opt_map_3 ~f:pp_triple a.print b.print c.print)
+    ?print:(_opt_map_3 ~f:Print.triple a.print b.print c.print)
     (Gen.triple a.gen b.gen c.gen)
 
 let option a =
@@ -354,7 +437,7 @@ let option a =
       ~f:(fun f o -> match o with None -> 0 | Some x -> f x)
   and shrink =
     _opt_map a.shrink
-    ~f:(fun f o -> match o with None -> _iter_nil | Some x -> _iter_map some_ (f x))
+    ~f:(fun f o -> match o with None -> Iter.empty | Some x -> Iter.(f x >|= some_))
   in
   make
     ~small
@@ -430,7 +513,7 @@ let map ?rev f a =
   make
     ?print:(_opt_map_2 rev a.print ~f:(fun r p x -> p (r x)))
     ?small:(_opt_map_2 rev a.small ~f:(fun r s x -> s (r x)))
-    ?shrink:(_opt_map_2 rev a.shrink ~f:(fun r g x -> _iter_map f @@ g (r x)))
+    ?shrink:(_opt_map_2 rev a.shrink ~f:(fun r g x -> Iter.(g (r x) >|= f)))
     ?collect:(_opt_map_2 rev a.collect ~f:(fun r f x -> f (r x)))
     (fun st -> f (a.gen st))
 
@@ -509,20 +592,17 @@ module LawsState = struct
     let rec shrink_ st i ~steps = match st.arb.shrink with
       | None -> i, steps
       | Some f ->
-        let choices = f i in
-        try_iter_ st choices ~default:i ~steps
-    and try_iter_ st choices ~default ~steps = match choices() with
-      | None -> default, steps
-      | Some x ->
-          let is_smaller_counter_ex =
+        let i' = Iter.find
+          (fun x ->
             try
               not (st.func x)
             with FailedPrecondition ->
               false
-          in
-          if is_smaller_counter_ex
-            then shrink_ ~steps:(steps+1) st x (* shrinked by one step *)
-            else try_iter_ st choices ~default ~steps
+          ) (f i)
+        in
+        match i' with
+        | None -> i, steps
+        | Some i' -> shrink_ st i' ~steps:(steps+1) (* shrink further *)
     in
     shrink_ ~steps:0 st i
 end
