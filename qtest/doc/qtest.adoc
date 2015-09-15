@@ -319,6 +319,15 @@ The meaning of `~small:List.length` is therefore simply:
     ``choose the shortest list''. For very complicated cases, you can simultaneously
 increase `count` to yield an even higher-quality counterexample.
 
+Shrinking::
+A parameter `shrink: ('a -> 'a Iter.t)` can be provided along with a random
+generator. If so, when a counter-example is found for a property, the
+counter-example will be shrunk recursively as long as it continues refuting
+the property; this allows to find smaller counter-examples. However, shrinking
+can be slow. A parameter `~max_fail:int` can be given to the test
+by writing `(*$Q & ~max_fail:5` to limit the number of counter-examples
+to find, in case shrinking them is too slow.
+
 Raw Random Tests::
 Using `(*$QR`, similar to the raw unit test `(*$R`, it is possible to
 write a random test on multiple lines without the trailing `\`
@@ -338,6 +347,16 @@ The `(*$QR` block needs to contain exactly two values:
 
     Random Generator::: of type `'a Quickcheck.arbitrary`
     Property to test::: of type `'a -> bool`
+
+Custom Generators::
+For types that are not lists of integers or strings, it can be useful to define
+one's own `'a arbitrary` instance for the type. The function to use is
+`Q.make`, it takes a `'a Q.Gen.t` random generator, and optional arguments
+  * `~shrink:('a -> 'a Iter.t)` to define how to shrink counter-examples
+  * `~small:('a -> 'b)` (where `'b` is ordered) to select small counter-examples
+  * `~print:('a -> string)` to print counter-examples
+  * `~collect:('a -> string)` maps inputs to a `string` descriptor and
+    counts how many values belong to each descriptor, for statistics.
 
 [[raw-ounit-tests-for-raw]]
 ==== Raw OUnit Tests: `R` for ``Raw''
