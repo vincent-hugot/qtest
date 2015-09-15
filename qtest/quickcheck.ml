@@ -255,7 +255,7 @@ let numeral_string_of_size size = string_gen_of_size size Gen.numeral
 let shrink_list_ l =
   let rec remove_one l r = match r with
     | [] -> []
-    | x :: tail -> (List.rev_append l r) :: remove_one (x :: l) tail
+    | x :: tail -> (List.rev_append l tail) :: remove_one (x :: l) tail
   in
   remove_one [] l
 
@@ -480,12 +480,15 @@ module LawsState = struct
   and try_list_ st l ~default = match l with
     | [] -> default
     | x :: tail ->
-        try
-          if st.func x
-          then try_list_ st tail ~default
-          else shrink st x (* shrinked by one step *)
-        with FailedPrecondition ->
-          try_list_ st tail ~default
+        let is_smaller_counter_ex =
+          try
+            not (st.func x)
+          with FailedPrecondition ->
+            false
+        in
+        if is_smaller_counter_ex
+          then shrink st x (* shrinked by one step *)
+          else try_list_ st tail ~default
 end
 
 module S = LawsState
