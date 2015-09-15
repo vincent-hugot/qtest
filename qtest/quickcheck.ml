@@ -104,6 +104,12 @@ module Gen = struct
         lor ((RS.bits st land 3) lsl 60)  (* Top 2 bits *)  (* top bit = 0 *)
 
   let int st = if RS.bool st then - (pint st) - 1 else pint st
+  let int_bound n =
+    assert (n >= 0);
+    fun st -> Random.State.int st (n+1)
+  let int_range a b =
+    assert (b >= a);
+    fun st -> a + (Random.State.int st (b-a+1))
 
   let random_binary_string st length =
     (* 0b011101... *)
@@ -233,6 +239,8 @@ let pos_float = make_scalar ~print:string_of_float Gen.pfloat
 let neg_float = make_scalar ~print:string_of_float Gen.nfloat
 
 let int = make_scalar ~print:string_of_int Gen.int
+let int_bound n = make_scalar ~print:string_of_int (Gen.int_bound n)
+let int_range a b = make_scalar ~print:string_of_int (Gen.int_range a b)
 let pos_int = make_scalar ~print:string_of_int Gen.pint
 let small_int = make_scalar ~print:string_of_int Gen.nat
 let small_int_corners () = make_scalar ~print:string_of_int (Gen.nng_corners ())

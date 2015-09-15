@@ -33,6 +33,8 @@ module Gen : sig
   val neg_int : int t (** negative int *)
   val pint : int t (** positive uniform int *)
   val int : int t (** uniform int *)
+  val int_bound : int -> int t (** Uniform within [0... bound] *)
+  val int_range : int -> int -> int t (** Uniform within [low,high] *)
 
   val ui32 : int32 t
   val ui64 : int64 t
@@ -129,6 +131,13 @@ val neg_float : float arbitrary
 
 val int : int arbitrary
 (** int generator. Uniformly distributed *)
+
+val int_bound : int -> int arbitrary
+(** [int_bound n] is uniform between [0] and [n] included *)
+
+val int_range : int -> int -> int arbitrary
+(** [int_range a b] is uniform between [a] and [b] included. [b] must be
+    larger than [a]. *)
 
 val int32 : int32 arbitrary
 (** int32 generator. Uniformly distributed *)
