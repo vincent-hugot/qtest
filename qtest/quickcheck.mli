@@ -110,6 +110,8 @@ module Iter : sig
   val map : ('a -> 'b) -> 'a t -> 'b t
   val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
   val (>|=) : 'a t -> ('a -> 'b) -> 'b t
+  val append : 'a t -> 'a t -> 'a t
+  val (<+>) : 'a t -> 'a t -> 'a t (** Synonym to {!append} *)
   val of_list : 'a list -> 'a t
   val of_array : 'a array -> 'a t
   val pair : 'a t -> 'b t -> ('a * 'b) t

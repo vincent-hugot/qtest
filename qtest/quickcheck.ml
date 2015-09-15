@@ -217,6 +217,8 @@ module Iter = struct
   let map f a yield = a (fun x -> yield (f x))
   let map2 f a b yield = a (fun x -> b (fun y -> yield (f x y)))
   let (>|=) a f = map f a
+  let append a b yield = a yield; b yield
+  let (<+>) = append
   let of_list l yield = List.iter yield l
   let of_array a yield = Array.iter yield a
   let pair a b yield = a (fun x -> b(fun y -> yield (x,y)))
