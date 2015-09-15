@@ -431,9 +431,15 @@ let map_same_type f a =
 
 (* Laws *)
 
+type 'a failed_state = {
+  counter_ex: 'a; (** The counter-example itself *)
+  shrink_steps: int; (** How many shrinking steps for this counterex *)
+  failures_num: int; (** Number of counter-examples found *)
+}
+
 type 'a result_state =
   | Success
-  | Failed of 'a * int  (* number of failures *)
+  | Failed of 'a failed_state
 
 (* result returned by [laws] *)
 type 'a result = {
@@ -443,14 +449,19 @@ type 'a result = {
   res_collect: (string, int) Hashtbl.t lazy_t;
 }
 
-let fail ?small res i = match res.res_state with
-  | Success -> res.res_state <- Failed (i, 1)
-  | Failed (i', n) ->
+let fail ?small ~steps res i = match res.res_state with
+  | Success ->
+      res.res_state <- Failed {counter_ex=i; shrink_steps=steps; failures_num=1}
+  | Failed f ->
       match small with
-      | Some small when small i < small i' ->
-          res.res_state <- Failed (i, n+1)
+      | Some small when small i < small f.counter_ex ->
+          res.res_state <- Failed {
+            counter_ex=i;
+            failures_num=f.failures_num+1;
+            shrink_steps=steps;
+          }
       | _ ->
-          res.res_state <- Failed (i', n+1)
+          res.res_state <- Failed {f with failures_num=f.failures_num+1}
 
 module LawsState = struct
   (* state required by [laws] to execute *)
@@ -483,24 +494,28 @@ module LawsState = struct
         let n = try Hashtbl.find tbl key with Not_found -> 0 in
         Hashtbl.replace tbl key (n+1)
 
-  (* try to shrink counter-ex [i] into a smaller one *)
-  let rec shrink st i = match st.arb.shrink with
-    | None -> i
-    | Some f ->
-      let choices = f i in
-      try_iter_ st choices ~default:i
-  and try_iter_ st choices ~default = match choices() with
-    | None -> default
-    | Some x ->
-        let is_smaller_counter_ex =
-          try
-            not (st.func x)
-          with FailedPrecondition ->
-            false
-        in
-        if is_smaller_counter_ex
-          then shrink st x (* shrinked by one step *)
-          else try_iter_ st choices ~default
+  (* try to shrink counter-ex [i] into a smaller one. Returns
+     shrinked value and number of steps *)
+  let shrink st i =
+    let rec shrink_ st i ~steps = match st.arb.shrink with
+      | None -> i, steps
+      | Some f ->
+        let choices = f i in
+        try_iter_ st choices ~default:i ~steps
+    and try_iter_ st choices ~default ~steps = match choices() with
+      | None -> default, steps
+      | Some x ->
+          let is_smaller_counter_ex =
+            try
+              not (st.func x)
+            with FailedPrecondition ->
+              false
+          in
+          if is_smaller_counter_ex
+            then shrink_ ~steps:(steps+1) st x (* shrinked by one step *)
+            else try_iter_ st choices ~default ~steps
+    in
+    shrink_ ~steps:0 st i
 end
 
 module S = LawsState
@@ -529,10 +544,10 @@ let rec laws state =
     | _ -> handle_fail state input
 and handle_fail state input =
   (* first, shrink *)
-  let input = S.shrink state input in
+  let input, steps = S.shrink state input in
   (* fail *)
   S.decr_count state;
-  fail state.S.res input;
+  fail state.S.res ~steps input;
   if _is_some state.S.arb.small
     then laws state
     else state.S.res
@@ -574,7 +589,11 @@ let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a fun
   );
   match result.res_state with
     | Success -> ()
-    | Failed (i, n) ->
+    | Failed f ->
         let pp = match a.print with None -> no_print_ | Some x -> x in
-        let msg = Printf.sprintf "law %s failed on %d cases. Ex: %s" name n (pp i) in
+        let msg = Printf.sprintf "law %s failed on %d cases. Ex: %s%s"
+          name f.failures_num (pp f.counter_ex)
+            (if f.shrink_steps > 0
+              then Printf.sprintf " (after %d shrink steps)" f.shrink_steps else "")
+        in
         failwith msg
