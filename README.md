@@ -6,9 +6,9 @@ developed internally for [Batteries][bat] under the
 name "qTest".
 
 
-## qTest2 
+## qTest2
 
-qTest version 2 is the current implementation, and it considered stable and
+qTest version 2.1 is the current implementation, and it considered stable and
 feature-complete. It is available under the _qtest/_ directory of this repository.
 It has extensive (but not quite up-to-date) [documentation][doc],
 as well as good syntax highlighting for Kate (KatePart: KWrite, KDevelop, Konqueror,...)
@@ -17,7 +17,7 @@ and basic support for Emacs.
 For a sanity check of the system and a raw demonstration of available syntaxes,
 see the _qtest/tests/_ subdirectory.
 
-qTest2 relies on oUnit to provide the underlying testing framework.
+qTest2 relies on [oUnit](ounit.forge.ocamlcore.org/) to provide the underlying testing framework.
 
 Backwards-incompatible changes are unlikely to be considered.
 
@@ -30,7 +30,7 @@ Execute one of:
     ocaml do.ml qtest remove  [prefix]
 
 OASIS will be used as backend.
-    
+
 ## Future works
 
 There are ideas floating around on how to improve qTest2, generally revolving
@@ -55,8 +55,9 @@ and backwards compatibility with qtest2 is not a consideration.
  * Oct 21, 2012: qtest2 moves to its own repository.
 
 Over time, the various versions of qtest have received additional contributions by:
-Eric Norige, Gabriel Scherer, Cedric Cellier, Valentin Gatien-Baron and Max Mouratov.
- 
+Eric Norige, Gabriel Scherer, Cedric Cellier, Valentin Gatien-Baron, Max Mouratov
+and Simon Cruanes
+
 ## Contact
 
 The issues system of github seems the sanest way for now.
@@ -65,4 +66,4 @@ Current developer & maintainer: Vincent Hugot.
 
 
 [bat]: http://batteries.forge.ocamlcore.org/ "Batteries"
-[doc]: http://batteries.vhugot.com/qtest/ "qTest Documentation"
+[doc]: qtest/doc/qtest.adoc "qTest Documentation"

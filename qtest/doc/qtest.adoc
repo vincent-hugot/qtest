@@ -1,6 +1,5 @@
 = QTest
-Vincent Hugot and the Batteries Team
-v2.0
+v2.1
 :toc: macro
 :toclevels: 4
 :source-highlighter: pygments
