@@ -472,6 +472,7 @@ module LawsState = struct
     res: 'a result;
     mutable num: int;  (** number of iterations to do *)
     mutable max_gen: int; (** maximum number of generations allowed *)
+    mutable max_fail: int; (** maximum number of counter-examples allowed *)
   }
 
   let is_done state = state.num <= 0 || state.max_gen <= 0
@@ -547,8 +548,9 @@ and handle_fail state input =
   let input, steps = S.shrink state input in
   (* fail *)
   S.decr_count state;
+  state.S.max_fail <- state.S.max_fail - 1;
   fail state.S.res ~steps input;
-  if _is_some state.S.arb.small
+  if _is_some state.S.arb.small && state.S.max_fail > 0
     then laws state
     else state.S.res
 
@@ -560,13 +562,15 @@ let no_print_ _ = "<no printer>"
 let verbose = ref false
 
 (** Like laws, but throws an exception instead of returning an option.  *)
-let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) name a func st =
+let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) ?max_fail name a func st =
   let a = match small with None -> a | Some f -> set_small f a in
+  let max_fail = match max_fail with None -> count | Some x -> x in
   let state = {S.
     func;
     st;
     arb = a;
     max_gen;
+    max_fail;
     num = count;
     res = {
       res_state=Success; res_count=0; res_gen=0;

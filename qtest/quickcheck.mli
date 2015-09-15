@@ -260,7 +260,7 @@ val verbose : bool ref
     on their set of inputs *)
 
 val laws_exn :
-  ?small:('a -> int) -> ?count:int -> ?max_gen:int ->
+  ?small:('a -> int) -> ?count:int -> ?max_gen:int -> ?max_fail:int ->
   string -> 'a arbitrary -> ('a -> bool) -> Random.State.t -> unit
  (** [laws_exn ?small ?count name arbitrary law st] generates up to [count] random
      values of type ['a] with using [arbitrary] and the random state [st]. The
@@ -271,6 +271,8 @@ val laws_exn :
       the field [arbitrary.small].
      @param max_gen maximum number of times the generation function is called
       to replace inputs that do not satisfy preconditions
+     @param max_fail maximum number of failures before we stop generating
+      inputs. This is useful if shrinking takes too much time.
 
      @raise Failure if a counter example has been found, containing the stringified example
  *)
