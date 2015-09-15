@@ -91,6 +91,7 @@ module Print : sig
   val float : float t
   val char : char t
   val string : string t
+  val option : 'a t -> 'a option t
 
   val pair : 'a t -> 'b t -> ('a*'b) t
   val triple : 'a t -> 'b t -> 'c t -> ('a*'b*'c) t
@@ -126,6 +127,7 @@ module Shrink : sig
   val nil : 'a t
   (** No shrink *)
 
+  val option : 'a t -> 'a option t
   val string : string t
   val array : ?shrink:'a t -> 'a array t
   val list : ?shrink:'a t -> 'a list t

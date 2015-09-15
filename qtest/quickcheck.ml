@@ -182,6 +182,10 @@ module Print = struct
   let string s = s
   let char c = String.make 1 c
 
+  let option f = function
+    | None -> "None"
+    | Some x -> "Some (" ^ f x ^ ")"
+
   let pair a b (x,y) = Printf.sprintf "(%s, %s)" (a x) (b y)
   let triple a b c (x,y,z) = Printf.sprintf "(%s, %s, %s)" (a x) (b y) (c z)
   let quad a b c d (x,y,z,w) =
@@ -237,6 +241,10 @@ module Shrink = struct
   type 'a t = 'a -> 'a Iter.t
 
   let nil _ = Iter.empty
+
+  let option s x = match x with
+    | None -> Iter.empty
+    | Some x -> Iter.(return None <+> map (fun y->Some y) (s x))
 
   let string s yield =
     for i =0 to String.length s-1 do
@@ -426,25 +434,19 @@ let triple a b c =
     (Gen.triple a.gen b.gen c.gen)
 
 let option a =
-  let some_ x = Some x in
   let g f st =
     let p = RS.float st 1. in
     if p < 0.15 then None
     else Some (f st)
-  and p f = function
-    | None -> "None"
-    | Some x -> "Some " ^ f x
+  and shrink = _opt_map a.shrink ~f:Shrink.option
   and small =
     _opt_or a.small ~d:(function None -> 0 | Some _ -> 1)
       ~f:(fun f o -> match o with None -> 0 | Some x -> f x)
-  and shrink =
-    _opt_map a.shrink
-    ~f:(fun f o -> match o with None -> Iter.empty | Some x -> Iter.(f x >|= some_))
   in
   make
     ~small
     ?shrink
-    ?print:(_opt_map ~f:p a.print)
+    ?print:(_opt_map ~f:Print.option a.print)
     (g a.gen)
 
 (* TODO: explain black magic in this!! *)
