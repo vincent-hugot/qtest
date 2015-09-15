@@ -79,11 +79,13 @@ module Gen : sig
   *)
 end
 
+type 'a iterator = unit -> 'a option
+
 type 'a arbitrary = {
   gen: 'a Gen.t;
   print: ('a -> string) option; (** print values *)
   small: ('a -> int) option;  (** size of example *)
-  shrink: ('a -> 'a list) option;  (** shrink to smaller examples *)
+  shrink: ('a -> 'a iterator) option;  (** shrink to smaller examples *)
   collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 }
 (** a value of type ['a arbitrary] is an object with a method for generating random
@@ -94,7 +96,7 @@ type 'a arbitrary = {
 val make :
   ?print:('a -> string) ->
   ?small:('a -> int) ->
-  ?shrink:('a -> 'a list) ->
+  ?shrink:('a -> 'a iterator) ->
   ?collect:('a -> string) ->
   'a Gen.t -> 'a arbitrary
 (** Builder for arbitrary. Default is to only have a generator, but other
@@ -102,7 +104,7 @@ val make :
 
 val set_print : ('a -> string) -> 'a arbitrary -> 'a arbitrary
 val set_small : ('a -> int) -> 'a arbitrary -> 'a arbitrary
-val set_shrink : ('a -> 'a list) -> 'a arbitrary -> 'a arbitrary
+val set_shrink : ('a -> 'a iterator) -> 'a arbitrary -> 'a arbitrary
 val set_collect : ('a -> string) -> 'a arbitrary -> 'a arbitrary
 
 val choose : 'a arbitrary list -> 'a arbitrary
@@ -233,7 +235,7 @@ val always : ?print:('a -> string) -> 'a -> 'a arbitrary
 (** Always return the same element *)
 
 val frequency : ?print:('a -> string) -> ?small:('a -> int) ->
-                ?shrink:('a -> 'a list) -> ?collect:('a -> string) ->
+                ?shrink:('a -> 'a iterator) -> ?collect:('a -> string) ->
                 (int * 'a arbitrary) list -> 'a arbitrary
 (** Similar to {!oneof} but with frequencies *)
 

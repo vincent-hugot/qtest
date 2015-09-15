@@ -32,6 +32,11 @@ let _opt_sum a b = match a, b with
   | Some _, _ -> a
   | None, _ -> b
 
+let _iter_nil () = None
+let _iter_map f g () = match g() with
+  | None -> None
+  | Some x -> Some (f x)
+
 let sum_int = List.fold_left (+) 0
 
 exception FailedPrecondition
@@ -178,11 +183,13 @@ let pp_triple p1 p2 p3 (t1,t2,t3) = "(" ^ p1 t1 ^ ", " ^ p2 t2 ^ ", " ^ p3 t3 ^ 
 
 (* arbitrary instances *)
 
+type 'a iterator = unit -> 'a option
+
 type 'a arbitrary = {
   gen: 'a Gen.t;
   print: ('a -> string) option; (** print values *)
   small: ('a -> int) option;  (** size of example *)
-  shrink: ('a -> 'a list) option;  (** shrink to smaller examples *)
+  shrink: ('a -> 'a iterator) option;  (** shrink to smaller examples *)
   collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 }
 
@@ -200,7 +207,7 @@ let set_shrink f o = {o with shrink=Some f}
 let set_collect f o = {o with collect=Some f}
 
 let small1 _ = 1
-let shrink_nil _ = []
+let shrink_nil _ = _iter_nil
 
 let make_scalar ?print ?collect gen =
   make ~shrink:shrink_nil ~small:small1 ?print ?collect gen
@@ -253,11 +260,12 @@ let numeral_string = string_gen Gen.numeral
 let numeral_string_of_size size = string_gen_of_size size Gen.numeral
 
 let shrink_list_ l =
-  let rec remove_one l r = match r with
-    | [] -> []
-    | x :: tail -> (List.rev_append l tail) :: remove_one (x :: l) tail
-  in
-  remove_one [] l
+  let st = ref ([], l) in
+  fun () -> match !st with
+    | _, [] -> None
+    | l, x :: tail ->
+        st := (x :: l, tail);
+        Some (List.rev_append l tail)
 
 let list_sum_ f l = List.fold_left (fun acc x-> f x+acc) 0 l
 
@@ -283,12 +291,16 @@ let list_of_size size a =
 let array_sum_ f a = Array.fold_left (fun acc x -> f x+acc) 0 a
 
 let shrink_array_ a =
-  let b = Array.init (Array.length a)
-    (fun i ->
-      Array.init (Array.length a-1)
-        (fun j -> if j<i then a.(j) else a.(j-1))
-    ) in
-  Array.to_list b
+  let i = ref 0 in
+  fun () ->
+    if !i = Array.length a then None
+    else (
+      let a' = Array.init (Array.length a-1)
+        (fun j -> if j< !i then a.(j) else a.(j-1))
+      in
+      incr i;
+      Some a'
+    )
 
 let array a =
   let small = _opt_or ~d:Array.length ~f:array_sum_ a.small in
@@ -334,7 +346,7 @@ let option a =
       ~f:(fun f o -> match o with None -> 0 | Some x -> f x)
   and shrink =
     _opt_map a.shrink
-    ~f:(fun f o -> match o with None -> [] | Some x -> List.map some_ (f x))
+    ~f:(fun f o -> match o with None -> _iter_nil | Some x -> _iter_map some_ (f x))
   in
   make
     ~small
@@ -410,7 +422,7 @@ let map ?rev f a =
   make
     ?print:(_opt_map_2 rev a.print ~f:(fun r p x -> p (r x)))
     ?small:(_opt_map_2 rev a.small ~f:(fun r s x -> s (r x)))
-    ?shrink:(_opt_map_2 rev a.shrink ~f:(fun r g x -> List.map f @@ g (r x)))
+    ?shrink:(_opt_map_2 rev a.shrink ~f:(fun r g x -> _iter_map f @@ g (r x)))
     ?collect:(_opt_map_2 rev a.collect ~f:(fun r f x -> f (r x)))
     (fun st -> f (a.gen st))
 
@@ -475,11 +487,11 @@ module LawsState = struct
   let rec shrink st i = match st.arb.shrink with
     | None -> i
     | Some f ->
-      let l = f i in
-      try_list_ st l ~default:i
-  and try_list_ st l ~default = match l with
-    | [] -> default
-    | x :: tail ->
+      let choices = f i in
+      try_iter_ st choices ~default:i
+  and try_iter_ st choices ~default = match choices() with
+    | None -> default
+    | Some x ->
         let is_smaller_counter_ex =
           try
             not (st.func x)
@@ -488,7 +500,7 @@ module LawsState = struct
         in
         if is_smaller_counter_ex
           then shrink st x (* shrinked by one step *)
-          else try_list_ st tail ~default
+          else try_iter_ st choices ~default
 end
 
 module S = LawsState
