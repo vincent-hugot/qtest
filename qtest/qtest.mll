@@ -60,6 +60,9 @@ let uident = uppercase identchar*
 rule lexml t = parse
   (* test pragmas *)
   (****************)
+| "(*$QR" { (* quickcheck random test, in a raw form *)
+  let lnum = lnumof lexbuf in
+  register_mtest lexbuf lexheader (lexbody_raw (succ lnum) buffy) lnum Random_raw }
 | "(*$Q"  { (* quickcheck (random) test *)
   let lnum = lnumof lexbuf in
   register_mtest lexbuf lexheader (lexbody (succ lnum) buffy []) lnum Random  }
