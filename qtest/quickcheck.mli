@@ -130,6 +130,7 @@ module Shrink : sig
   val nil : 'a t
   (** No shrink *)
 
+  val int : int t
   val option : 'a t -> 'a option t
   val string : string t
   val array : ?shrink:'a t -> 'a array t

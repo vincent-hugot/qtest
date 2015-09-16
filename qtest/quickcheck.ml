@@ -250,6 +250,12 @@ module Shrink = struct
 
   let nil _ = Iter.empty
 
+  (* get closer to 0 *)
+  let int x yield =
+    if x < -2 || x>2 then yield (x/2); (* faster this way *)
+    if x>0 then yield (x-1);
+    if x<0 then yield (x+1)
+
   let option s x = match x with
     | None -> Iter.empty
     | Some x -> Iter.(return None <+> map (fun y->Some y) (s x))
@@ -338,6 +344,8 @@ let small1 _ = 1
 
 let make_scalar ?print ?collect gen =
   make ~shrink:Shrink.nil ~small:small1 ?print ?collect gen
+let make_int ?collect gen =
+  make ~shrink:Shrink.int ~small:small1 ~print:Print.int ?collect gen
 
 let adapt_ o gen =
   make ?print:o.print ?small:o.small ?shrink:o.shrink ?collect:o.collect gen
@@ -359,14 +367,14 @@ let float = make_scalar ~print:string_of_float Gen.float
 let pos_float = make_scalar ~print:string_of_float Gen.pfloat
 let neg_float = make_scalar ~print:string_of_float Gen.nfloat
 
-let int = make_scalar ~print:string_of_int Gen.int
-let int_bound n = make_scalar ~print:string_of_int (Gen.int_bound n)
-let int_range a b = make_scalar ~print:string_of_int (Gen.int_range a b)
+let int = make_int Gen.int
+let int_bound n = make_int (Gen.int_bound n)
+let int_range a b = make_int (Gen.int_range a b)
 let (--) = int_range
-let pos_int = make_scalar ~print:string_of_int Gen.pint
-let small_int = make_scalar ~print:string_of_int Gen.nat
-let small_int_corners () = make_scalar ~print:string_of_int (Gen.nng_corners ())
-let neg_int = make_scalar ~print:string_of_int Gen.neg_int
+let pos_int = make_int Gen.pint
+let small_int = make_int Gen.nat
+let small_int_corners () = make_int (Gen.nng_corners ())
+let neg_int = make_int Gen.neg_int
 
 let int32 = make_scalar ~print:(fun i -> Int32.to_string i ^ "l") Gen.ui32
 let int64 = make_scalar ~print:(fun i -> Int64.to_string i ^ "L") Gen.ui64
