@@ -44,11 +44,15 @@ let print_result_list =
    of the function, and the original result in a tuple *)
 let time_fun f x y =
   let begin_time = Unix.gettimeofday () in
-    (Unix.gettimeofday () -. begin_time, f x y)
+  let res = f x y in (* evaluate this first *)
+  Unix.gettimeofday () -. begin_time, res
 
 let run test =
+  let print_list = ref false in
+  let set_list () = Quickcheck.verbose := true; print_list := true in
   let options = Arg.align
     [ "-verbose", Arg.Set Quickcheck.verbose, " enable verbose tests"
+    ; "-list", Arg.Unit set_list, " print list of tests (2 lines each). Implies -verbose"
     ] in
   Arg.parse options (fun _ ->()) "run qtest suite";
   let _counter = ref (0,0,0) in (* Success, Failure, Other *)
@@ -58,21 +62,34 @@ let run test =
     | RFailure _ -> let (s,f,o) = !_counter in _counter := (s,succ f,o)
     | _ -> let (s,f,o) = !_counter in _counter := (s,f, succ o)
   in
-  let display_test ?(ended=false) p  = ps "\r";
+  (* time each test *)
+  let start = ref 0. and stop = ref 0. in
+  (* display test as it starts and ends *)
+  let display_test ?(ended=false) p  =
     let (s,f,o) = !_counter in
     let cartouche = va " [%d%s%s / %d] " s
       (if f=0 then "" else va "+%d" f)
       (if o=0 then "" else va " %d!" o) total_tests
     and path = string_of_path p in
-    let line = cartouche ^ path ^ (if ended then " *" else "") in
+    let end_marker =
+      if !print_list then (
+        (* print a single line *)
+        if ended then va " (after %.2fs)\n" (!stop -. !start) else "\n"
+      ) else (
+        ps "\r";
+        if ended then " *" else ""
+      )
+    in
+    let line = cartouche ^ path ^ end_marker in
     let remaining = 79 - String.length line in
-    let cover = if remaining > 0 then String.make remaining ' ' else "" in
+    let cover = if remaining > 0 && not !print_list
+      then String.make remaining ' ' else "" in
     pf "%s%s%!" line cover;
   in
   let hdl_event = function
-  | EStart p -> display_test p
-  | EEnd p  -> display_test p ~ended:true
-  | EResult result -> update result
+    | EStart p -> start := Unix.gettimeofday(); display_test p
+    | EEnd p  -> stop := Unix.gettimeofday(); display_test p ~ended:true
+    | EResult result -> update result
   in
   ps "Running tests...";
   let running_time, results = time_fun perform_test hdl_event test in
