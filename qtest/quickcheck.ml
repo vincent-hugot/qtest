@@ -76,6 +76,8 @@ module Gen = struct
     else if p < 0.95 then RS.int st 1_000
     else RS.int st 10_000
 
+  let small_int = nat
+
   let unit _st = ()
 
   let bool st = RS.bool st

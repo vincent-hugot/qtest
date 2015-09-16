@@ -35,6 +35,7 @@ module Gen : sig
   val neg_int : int t (** negative int *)
   val pint : int t (** positive uniform int *)
   val int : int t (** uniform int *)
+  val small_int : int t (** Synonym to {!nat} *)
   val int_bound : int -> int t (** Uniform within [0... bound] *)
   val int_range : int -> int -> int t (** Uniform within [low,high] *)
   val (--) : int -> int -> int t (** Synonym to {!int_range} *)
