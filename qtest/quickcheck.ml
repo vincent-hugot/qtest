@@ -52,6 +52,7 @@ module Gen = struct
   let map f x st = f (x st)
   let map2 f x y st = f (x st) (y st)
   let map3 f x y z st = f (x st) (y st) (z st)
+  let (>|=) x f = map f x
 
   let oneof l st = List.nth l (Random.State.int st (List.length l)) st
   let oneofl xs st = List.nth xs (Random.State.int st (List.length xs))
@@ -105,6 +106,7 @@ module Gen = struct
   let int_range a b =
     assert (b >= a);
     fun st -> a + (Random.State.int st (b-a+1))
+  let (--) = int_range
 
   let random_binary_string st length =
     (* 0b011101... *)
@@ -354,6 +356,7 @@ let neg_float = make_scalar ~print:string_of_float Gen.nfloat
 let int = make_scalar ~print:string_of_int Gen.int
 let int_bound n = make_scalar ~print:string_of_int (Gen.int_bound n)
 let int_range a b = make_scalar ~print:string_of_int (Gen.int_range a b)
+let (--) = int_range
 let pos_int = make_scalar ~print:string_of_int Gen.pint
 let small_int = make_scalar ~print:string_of_int Gen.nat
 let small_int_corners () = make_scalar ~print:string_of_int (Gen.nng_corners ())

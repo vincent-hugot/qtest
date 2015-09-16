@@ -17,6 +17,7 @@ module Gen : sig
   val map : ('a -> 'b) -> 'a t -> 'b t
   val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
   val map3 : ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
+  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
 
   val oneof : 'a t list -> 'a t
   val oneofl : 'a list -> 'a t
@@ -36,6 +37,7 @@ module Gen : sig
   val int : int t (** uniform int *)
   val int_bound : int -> int t (** Uniform within [0... bound] *)
   val int_range : int -> int -> int t (** Uniform within [low,high] *)
+  val (--) : int -> int -> int t (** Synonym to {!int_range} *)
 
   val ui32 : int32 t
   val ui64 : int64 t
@@ -191,6 +193,9 @@ val int_bound : int -> int arbitrary
 val int_range : int -> int -> int arbitrary
 (** [int_range a b] is uniform between [a] and [b] included. [b] must be
     larger than [a]. *)
+
+val (--) : int -> int -> int arbitrary
+(** Synonym to {!int_range} *)
 
 val int32 : int32 arbitrary
 (** int32 generator. Uniformly distributed *)
