@@ -265,7 +265,7 @@ module Shrink = struct
   let array ?shrink a yield =
     for i=0 to Array.length a-1 do
       let a' = Array.init (Array.length a-1)
-        (fun j -> if j< i then a.(j) else a.(j-1))
+        (fun j -> if j< i then a.(j) else a.(j+1))
       in
       yield a'
     done;
