@@ -143,7 +143,7 @@ type 'a arbitrary = {
   gen: 'a Gen.t;
   print: ('a -> string) option; (** print values *)
   small: ('a -> int) option;  (** size of example *)
-  shrink: ('a -> 'a Iter.t) option;  (** shrink to smaller examples *)
+  shrink: ('a Shrink.t) option;  (** shrink to smaller examples *)
   collect: ('a -> string) option;  (** map value to tag, and group by tag *)
 }
 (** a value of type ['a arbitrary] is an object with a method for generating random
@@ -152,17 +152,17 @@ type 'a arbitrary = {
 *)
 
 val make :
-  ?print:('a -> string) ->
+  ?print:'a Print.t ->
   ?small:('a -> int) ->
-  ?shrink:('a -> 'a Iter.t) ->
+  ?shrink:'a Shrink.t ->
   ?collect:('a -> string) ->
   'a Gen.t -> 'a arbitrary
 (** Builder for arbitrary. Default is to only have a generator, but other
     arguments can be added *)
 
-val set_print : ('a -> string) -> 'a arbitrary -> 'a arbitrary
+val set_print : 'a Print.t -> 'a arbitrary -> 'a arbitrary
 val set_small : ('a -> int) -> 'a arbitrary -> 'a arbitrary
-val set_shrink : ('a -> 'a Iter.t) -> 'a arbitrary -> 'a arbitrary
+val set_shrink : 'a Shrink.t -> 'a arbitrary -> 'a arbitrary
 val set_collect : ('a -> string) -> 'a arbitrary -> 'a arbitrary
 
 val choose : 'a arbitrary list -> 'a arbitrary
@@ -292,22 +292,22 @@ val fun2 : 'a arbitrary -> 'b arbitrary -> 'c arbitrary -> ('a -> 'b -> 'c) arbi
     here.
 *)
 
-val oneofl : ?print:('a -> string) -> ?collect:('a -> string) ->
+val oneofl : ?print:'a Print.t -> ?collect:('a -> string) ->
              'a list -> 'a arbitrary
 (** Pick an element randomly in the list *)
 
 val oneof : 'a arbitrary list -> 'a arbitrary
 (** Pick a generator among the list, randomly *)
 
-val always : ?print:('a -> string) -> 'a -> 'a arbitrary
+val always : ?print:'a Print.t -> 'a -> 'a arbitrary
 (** Always return the same element *)
 
-val frequency : ?print:('a -> string) -> ?small:('a -> int) ->
-                ?shrink:('a -> 'a Iter.t) -> ?collect:('a -> string) ->
+val frequency : ?print:'a Print.t -> ?small:('a -> int) ->
+                ?shrink:'a Shrink.t -> ?collect:('a -> string) ->
                 (int * 'a arbitrary) list -> 'a arbitrary
 (** Similar to {!oneof} but with frequencies *)
 
-val frequencyl : ?print:('a -> string) -> ?small:('a -> int) ->
+val frequencyl : ?print:'a Print.t -> ?small:('a -> int) ->
                 (int * 'a) list -> 'a arbitrary
 (** Same as {!oneofl}, but each element is paired with its frequency in
     the probability distribution (the higher, the more likely) *)
