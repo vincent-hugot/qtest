@@ -603,8 +603,8 @@ module LawsState = struct
           (fun x ->
             try
               not (st.func x)
-            with FailedPrecondition ->
-              false
+            with FailedPrecondition -> false
+            | _ -> true (* fail test (by error) *)
           ) (f i)
         in
         match i' with
