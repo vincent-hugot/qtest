@@ -12,9 +12,13 @@ let rec foldn ~f ~init:acc i =
 
 let _is_some = function Some _ -> true | None -> false
 
-let _opt_or ~d ~f = function
+let _opt_map_or ~d ~f = function
   | None -> d
   | Some x -> f x
+
+let _opt_or a b = match a with
+  | None -> b
+  | Some x -> x
 
 let _opt_map ~f = function
   | None -> None
@@ -389,7 +393,7 @@ let list_sum_ f l = List.fold_left (fun acc x-> f x+acc) 0 l
 
 let list a =
   (* small sums sub-sizes if present, otherwise just length *)
-  let small = _opt_or a.small ~f:list_sum_ ~d:List.length in
+  let small = _opt_map_or a.small ~f:list_sum_ ~d:List.length in
   let print = _opt_map a.print ~f:Print.list in
   make
     ~small
@@ -398,7 +402,7 @@ let list a =
     (Gen.list a.gen)
 
 let list_of_size size a =
-  let small = _opt_or a.small ~f:list_sum_ ~d:List.length in
+  let small = _opt_map_or a.small ~f:list_sum_ ~d:List.length in
   let print = _opt_map a.print ~f:Print.list in
   make
     ~small
@@ -409,7 +413,7 @@ let list_of_size size a =
 let array_sum_ f a = Array.fold_left (fun acc x -> f x+acc) 0 a
 
 let array a =
-  let small = _opt_or ~d:Array.length ~f:array_sum_ a.small in
+  let small = _opt_map_or ~d:Array.length ~f:array_sum_ a.small in
   make
     ~small
     ~shrink:(Shrink.array ?shrink:a.shrink)
@@ -417,7 +421,7 @@ let array a =
     (Gen.array a.gen)
 
 let array_of_size size a =
-  let small = _opt_or ~d:Array.length ~f:array_sum_ a.small in
+  let small = _opt_map_or ~d:Array.length ~f:array_sum_ a.small in
   make
     ~small
     ~shrink:(Shrink.array ?shrink:a.shrink)
@@ -430,12 +434,15 @@ let pair a b =
   make
     ?small:(_opt_map_2 ~f:(fun f g (x,y) -> f x+g y) a.small b.small)
     ?print:(_opt_map_2 ~f:Print.pair a.print b.print)
+    ~shrink:(Shrink.pair (_opt_or a.shrink Shrink.nil) (_opt_or b.shrink Shrink.nil))
     (Gen.pair a.gen b.gen)
 
 let triple a b c =
   make
     ?small:(_opt_map_3 ~f:(fun f g h (x,y,z) -> f x+g y+h z) a.small b.small c.small)
     ?print:(_opt_map_3 ~f:Print.triple a.print b.print c.print)
+    ~shrink:(Shrink.triple (_opt_or a.shrink Shrink.nil)
+      (_opt_or b.shrink Shrink.nil) (_opt_or c.shrink Shrink.nil))
     (Gen.triple a.gen b.gen c.gen)
 
 let option a =
@@ -445,7 +452,7 @@ let option a =
     else Some (f st)
   and shrink = _opt_map a.shrink ~f:Shrink.option
   and small =
-    _opt_or a.small ~d:(function None -> 0 | Some _ -> 1)
+    _opt_map_or a.small ~d:(function None -> 0 | Some _ -> 1)
       ~f:(fun f o -> match o with None -> 0 | Some x -> f x)
   in
   make
