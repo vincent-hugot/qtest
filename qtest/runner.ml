@@ -40,6 +40,23 @@ let print_result_list =
     (string_of_path (result_path result))
     (result_msg result) separator2)
 
+let seed = ref ~-1
+let st = ref None
+
+(* initialize random generator from seed (if any) *)
+let random_state () = match !st with
+  | None -> assert false
+  | Some st -> st
+
+let setup_random_state_ () =
+  let s = if !seed = ~-1 then (
+      Random.self_init ();  (* make new, truly random seed *)
+      Random.int (1 lsl 29);
+  ) else !seed in
+  seed := s;
+  Printf.eprintf "random seed: %d\n%!" s;
+  st := Some (Random.State.make [| s |])
+
 (* Function which runs the given function and returns the running time
    of the function, and the original result in a tuple *)
 let time_fun f x y =
@@ -53,8 +70,10 @@ let run test =
   let options = Arg.align
     [ "-verbose", Arg.Set Quickcheck.verbose, " enable verbose tests"
     ; "-list", Arg.Unit set_list, " print list of tests (2 lines each). Implies -verbose"
+    ; "-seed", Arg.Set_int seed, " set random seed (to repeat tests)"
     ] in
   Arg.parse options (fun _ ->()) "run qtest suite";
+  setup_random_state_ ();
   let _counter = ref (0,0,0) in (* Success, Failure, Other *)
   let total_tests = test_case_count test in
   let update = function
