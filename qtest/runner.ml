@@ -54,7 +54,7 @@ let setup_random_state_ () =
       Random.int (1 lsl 29);
   ) else !seed in
   seed := s;
-  Printf.eprintf "random seed: %d\n%!" s;
+  Printf.printf "random seed: %d\n%!" s;
   st := Some (Random.State.make [| s |])
 
 (* Function which runs the given function and returns the running time

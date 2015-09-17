@@ -691,14 +691,14 @@ let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) ?max_fail 
   } in
   let result = laws state in
   if !verbose then (
-    Printf.eprintf "\rlaw %s: %d relevant cases (%d total)\n"
+    Printf.printf "\rlaw %s: %d relevant cases (%d total)\n"
       name result.res_count result.res_gen;
     begin match a.collect with
     | None -> ()
     | Some _ ->
         let (lazy tbl) = result.res_collect in
         Hashtbl.iter
-          (fun case num -> Printf.eprintf "\r  %s: %d cases\n" case num)
+          (fun case num -> Printf.printf "\r  %s: %d cases\n" case num)
           tbl
     end;
     flush stderr;
