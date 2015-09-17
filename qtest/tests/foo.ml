@@ -141,17 +141,17 @@ module Tree = struct
     | Node(x,y) -> Printf.sprintf "Node(%s, %s)" (print x)(print y)
 
   let shrink = function
-    | Leaf _ -> []
-    | Node (x,y) -> [x;y]
+    | Leaf _ -> Q.Iter.empty
+    | Node (x,y) -> Q.Iter.of_list [x;y]
 
-  let gen = Q.Gen.(sized @@ fix (fun self n -> match n with
-    | 0 -> lift leaf nat
+  let gen = Q.Gen.(sized @@ fix (fun self n st -> match n with
+    | 0 -> map leaf nat st
     | n ->
-        frequency [1, lift leaf nat;
-                   3, lift2 node (self (n/2)) (self (n/2))]
+        frequency [1, map leaf nat ;
+                   3, map2 node (self (n/2)) (self (n/2))] st
   ))
 
-  let arb_tree = Q.make ~small:Tree.size ~shrink ~print gen
+  let arb_tree = Q.make ~small:size ~shrink ~print gen
   *)
 
   let rec rev = function
