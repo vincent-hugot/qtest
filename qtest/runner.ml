@@ -68,9 +68,12 @@ let run test =
   let print_list = ref false in
   let set_list () = Quickcheck.verbose := true; print_list := true in
   let options = Arg.align
-    [ "-verbose", Arg.Set Quickcheck.verbose, " enable verbose tests"
-    ; "-list", Arg.Unit set_list, " print list of tests (2 lines each). Implies -verbose"
-    ; "-seed", Arg.Set_int seed, " set random seed (to repeat tests)"
+    [ "-v", Arg.Set Quickcheck.verbose, " "
+    ; "--verbose", Arg.Set Quickcheck.verbose, " enable verbose tests"
+    ; "-l", Arg.Unit set_list, " "
+    ; "--list", Arg.Unit set_list, " print list of tests (2 lines each). Implies -verbose"
+    ; "-s", Arg.Set_int seed, " "
+    ; "--seed", Arg.Set_int seed, " set random seed (to repeat tests)"
     ] in
   Arg.parse options (fun _ ->()) "run qtest suite";
   setup_random_state_ ();

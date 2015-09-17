@@ -239,13 +239,13 @@ let set_output path =
   epf "Target file: `%s'. " path; outc := open_out path
 
 let options = Arg.align [
-"-o",               Arg.String set_output, "";
+"-o",               Arg.String set_output, " ";
 "--output",         Arg.String set_output,
 " <path>     (default: standard output) \
 Open or create a file for output; the resulting file will be an OCaml source file containing all the tests\
 ";
 
-"-p",               Arg.String add_preamble, "";
+"-p",               Arg.String add_preamble, " ";
 "--preamble",       Arg.String add_preamble,
 " <string>   (default: empty) \
 Add code to the tests preamble; typically this will be an instruction of the form 'open Module'\
