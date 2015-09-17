@@ -882,7 +882,7 @@ run qtest suite
 Currently the options are:
 
 - `--verbose`: verbose quick check tests (print statistics, etc.)
-- `--list`: print a list of tests as they are executed. Implies `--verbose`
+- `--list`: print a list of tests as they are executed.
 - `--seed`: force the choice of a random seed. When random tests start, the
   random seed used by the random generators is displayed; later, providing
   the same seed with `--seed <s>` will repeat the same tests.

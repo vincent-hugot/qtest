@@ -66,12 +66,13 @@ let time_fun f x y =
 
 let run test =
   let print_list = ref false in
-  let set_list () = Quickcheck.verbose := true; print_list := true in
+  let set_verbose () = Quickcheck.verbose := true in
+  let set_list () = print_list := true in
   let options = Arg.align
-    [ "-v", Arg.Set Quickcheck.verbose, " "
-    ; "--verbose", Arg.Set Quickcheck.verbose, " enable verbose tests"
+    [ "-v", Arg.Unit set_verbose, " "
+    ; "--verbose", Arg.Unit set_verbose, " enable verbose tests"
     ; "-l", Arg.Unit set_list, " "
-    ; "--list", Arg.Unit set_list, " print list of tests (2 lines each). Implies -verbose"
+    ; "--list", Arg.Unit set_list, " print list of tests (2 lines each)"
     ; "-s", Arg.Set_int seed, " "
     ; "--seed", Arg.Set_int seed, " set random seed (to repeat tests)"
     ] in
