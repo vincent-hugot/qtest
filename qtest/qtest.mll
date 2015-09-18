@@ -60,6 +60,9 @@ let uident = uppercase identchar*
 rule lexml t = parse
   (* test pragmas *)
   (****************)
+| "(*$QR" { (* quickcheck random test, in a raw form *)
+  let lnum = lnumof lexbuf in
+  register_mtest lexbuf lexheader (lexbody_raw (succ lnum) buffy) lnum Random_raw }
 | "(*$Q"  { (* quickcheck (random) test *)
   let lnum = lnumof lexbuf in
   register_mtest lexbuf lexheader (lexbody (succ lnum) buffy []) lnum Random  }
@@ -150,6 +153,7 @@ and lexinjectcp b = parse
    let code = B.contents b in B.clear b;
    register @@ Inject (info lexbuf,code) }
 
+(* TODO: eliminate comments *)
 (** body of an injection pragma: move *)
 and lexinjectmv b = parse
 | _ as c {
@@ -235,13 +239,13 @@ let set_output path =
   epf "Target file: `%s'. " path; outc := open_out path
 
 let options = Arg.align [
-"-o",               Arg.String set_output, "";
+"-o",               Arg.String set_output, " ";
 "--output",         Arg.String set_output,
 " <path>     (default: standard output) \
 Open or create a file for output; the resulting file will be an OCaml source file containing all the tests\
 ";
 
-"-p",               Arg.String add_preamble, "";
+"-p",               Arg.String add_preamble, " ";
 "--preamble",       Arg.String add_preamble,
 " <string>   (default: empty) \
 Add code to the tests preamble; typically this will be an instruction of the form 'open Module'\

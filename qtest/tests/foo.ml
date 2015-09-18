@@ -123,6 +123,50 @@ end
     bar.[0] = 'b'
   *)
 
+module Tree = struct
+  type t = Leaf of int | Node of t * t
+
+  let leaf x = Leaf x
+  let node x y = Node(x,y)
+
+  let rec size = function
+    | Leaf _ -> 1
+    | Node (x,y) -> 1 + size x + size y
+
+  (*$< Tree *)
+
+  (*$inject
+  let rec print = function
+    | Leaf x -> string_of_int x
+    | Node(x,y) -> Printf.sprintf "Node(%s, %s)" (print x)(print y)
+
+  let shrink = function
+    | Leaf _ -> Q.Iter.empty
+    | Node (x,y) -> Q.Iter.of_list [x;y]
+
+  let gen = Q.Gen.(sized @@ fix (fun self n st -> match n with
+    | 0 -> map leaf nat st
+    | n ->
+        frequency [1, map leaf nat ;
+                   3, map2 node (self (n/2)) (self (n/2))] st
+  ))
+
+  let arb_tree = Q.make ~small:size ~shrink ~print gen
+  *)
+
+  let rec rev = function
+    | Leaf x -> leaf x
+    | Node (x,y) -> node (rev y) (rev x)
+
+  (*$Q
+    arb_tree (fun t -> rev (rev t) = t)
+    arb_tree (fun t -> size t = size (rev t))
+    arb_tree (fun t -> (size t > 1) ==> (t = rev t))
+  *)
+
+  (*$>*)
+end
+
 
 module Zooo = struct 
 (*$begin:open Zooo *)

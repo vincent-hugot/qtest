@@ -112,4 +112,16 @@ increase \texttt{count} to yield an even higher-quality counterexample.
 
 \end{itemize}
 
+\textbf{Raw Random Tests:}
 
+Using \verb!(*$QR!, similar to the raw unit test \verb!(*$R!, it is possible
+to write a random test on multiple lines without the trailing \verb!\! characters.
+
+\begin{verbatim}
+(*$QR foo
+  Q.small_int
+    (fun i->
+      foo i (+) [1;2;3] = List.fold_left (+) i [1;2;3
+  ])
+*)
+\end{verbatim}

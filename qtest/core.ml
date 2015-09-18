@@ -62,7 +62,7 @@ let outf_target s = fpf !outc_target s
 (** indispensable preamble *)
 let hard_coded_preamble = "open OUnit;;\n\
 module Q = Quickcheck;;let ( ==> ) = Q.( ==> );;\n\
-let __qtest_random_state = Random.State.make_self_init();; \n\n"
+\n\n"
 
 (** global preamble, user-definable *)
 let global_preamble = Buffer.create 100
@@ -101,6 +101,7 @@ type metaheader = {
 type kind =
 | Simple    (* statement is asserted to be true *)
 | Random    (* statement is tested on random inputs, using Quickcheck *)
+| Random_raw  (* pair of (arbitrary, invariant) for Quickcheck *)
 | Raw       (* raw oUnit statement *)
 | Equal     (* Equality statement *)
 
@@ -233,11 +234,14 @@ let process uid = function
         "\"%s\" >:: (%s fun () -> OUnit.assert_equal ~msg:%s %s %s%s);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Random -> outf
-        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s __qtest_random_state);\n"
+        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s (Runner.random_state()));\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Raw -> outf
         "\"%s\" >:: (%s fun () -> (%s%s));\n"
         location bind lnumdir st.code;
+      | Random_raw -> outf
+        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s (Runner.random_state()));\n"
+        location bind extended_name test.header.hpar lnumdir st.code;
     in List.iter do_statement test.statements;
     outf "];; let _ = ___add %s;;\n" test_handle
   | Test test -> epf "Skipping `%s'\n" (get_test_name test)
