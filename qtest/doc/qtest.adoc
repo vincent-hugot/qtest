@@ -293,6 +293,14 @@ When generating lists, avoid
 that, given the size of the `Q.int` space, you are unlikely to generate
 any duplicate elements. If you wish to test your function’s behaviour
 with duplicates, prefer `Q.list Q.small_int`.
+Filtering Inputs::
+Rando, inputs can be filtered for a _precondition_ by stating a property
+`f ==> g`. An input `x` will be tested for the property `g` only if `f x` holds,
+otherwise it is discarded and a new input is generated. The total number of
+inputs generated can be capped using the `~max_gen:int` parameter (it should
+be bigger than `~count`). The system will try to make `count` tests, but stops
+after `max_gen` inputs are generated to avoid looping forever if acceptable
+inputs are too rare.
 Changing Number of Tests::
 If you want a specific test to execute
 each of its statements a specific number of times (deviating from the
