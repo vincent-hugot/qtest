@@ -1,13 +1,81 @@
-= QTest
+= iTeML / qtest v2.1.0
 v2.1
 :toc: macro
 :toclevels: 4
 :source-highlighter: pygments
 
-toc::[]
+
+*iTeML* is an inline test extraction project, originally
+developed internally for http://batteries.forge.ocamlcore.org/[the OCaml Batteries Included library] under the
+name *qtest*. It relies on http://ounit.forge.ocamlcore.org/[oUnit] as a testing framework, though users need not know anything about it for basic usage.
+
+NOTE: *iTeML* stands for _Inline (Unit) Tests for OCaml_. +
+  *qtest* stands for _Quick Testing_.
+
+The name *qtest* still refers to the current _implementation_ of iTeML, which is stable and
+feature-complete. 
+When major, compatibility-breaking changes are done, fully realising the project, the new utility will be called *iTeML*.
+
+
+* qtest is available for installation as an http://opam.ocaml.org/packages/qtest/qtest.2.1.0/[OPAM package].
+
+* It has extensive documentation: see section "<<introduction>>" to get started.
+
+* It has good syntax highlighting for Kate (KatePart: KWrite, KDevelop, Konqueror,...)
+and basic support for Emacs. See the https://github.com/vincent-hugot/iTeML/tree/master/editor_support[editor_support] directory
+
+
+*Manual installation:*
+
+Execute one of:
+
+    ocaml do.ml qtest build   [prefix]
+    ocaml do.ml qtest install [prefix]
+    ocaml do.ml qtest remove  [prefix]
+
+OASIS will be used as backend. `[prefix]` is of course the installation prefix from the configuration phase.
+
+*Future works:*
+
+There are ideas floating around on how to improve qtest2, generally revolving
+around going from a test "extraction" to an "annotation" model. The new, compatibility-breaking version
+would be called _iteml_, and can be thought of as _qtest3_.
+No timetable is set yet, as all parties involved are busy bees, 
+and qtest2 currently covers most of the needs of the Batteries project.
+
+
+*History of the project:*
+
+(or at least, what I (VH) can unearth of it thanks to git logs)
+
+ * 2007--2008  : Ilmari Heikkinen writes _make_suite.rb_ for his Prelude.ml.
+ * Jan 17, 2011: _make_suite.rb_ is copied into Batteries. (=qtest0)
+ * Jan 27, 2011: Kaustuv Chaudhuri writes from scratch
+   an equivalent _make_suite.mll_ to replace the Ruby script. (=qtest1)
+ * Jan 19, 2012: Vincent Hugot writes from scratch a new version, with a lot
+   of new features. Syntax changes a bit.  (=qtest2)
+ * Oct 21, 2012: qtest2 moves to its own repository.
+ * Sept. 2015: Simon Cruanes contributes a significant improvement of the random generation process.
+
+Over time, the various versions of qtest have received https://github.com/vincent-hugot/iTeML/graphs/contributors[contributions] by:
+Eric Norige, Gabriel Scherer, Cedric Cellier, Valentin Gatien-Baron, Max Mouratov,
+and Simon Cruanes.
+
+*Contact:*
+
+The preferred way is to create a https://github.com/vincent-hugot/iTeML/issues/new[new issue] on GitHub.
+
+Current maintainer: https://github.com/vincent-hugot[Vincent Hugot].
+
+
+'''
+
+toc::[] 
+
+
 
 [[introduction]]
-== Introduction
+== Introduction: What Is This Thing?
 
 In a nutshell, qtest is a small program which reads `.ml` and `.mli` source
 files and extracts inline unit tests from them. It is used internally by
@@ -871,7 +939,7 @@ by `--help` if needed.
 ----
 $ qtest extract foo.ml -o footest.ml
 
-$ ocamlfind ocamlopt -package QTest2Lib -linkpkg footest.ml -o footest
+$ ocamlfind ocamlopt -package qtest2Lib -linkpkg footest.ml -o footest
 
 $ ./footest --help
 
@@ -895,7 +963,4 @@ Currently the options are:
   random seed used by the random generators is displayed; later, providing
   the same seed with `--seed <s>` will repeat the same tests.
 
-[[editor-support]]
-== Editor Support
-
-coming soon
+  

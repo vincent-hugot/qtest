@@ -278,7 +278,7 @@ let () =
   let push_anon arg = (rev_anon_args := arg :: !rev_anon_args) in
   Arg.parse options push_anon usage_msg;
   match List.rev !rev_anon_args with
-    | [] -> pl "qtest: use --help for usage notes."
+    | [] -> pl "qtest v2.1.0: use --help for usage notes."
     | "extract" :: paths -> generate paths
     | arg :: _ ->
       Arg.usage options usage_msg; prerr_newline();

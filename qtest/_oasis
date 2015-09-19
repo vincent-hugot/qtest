@@ -1,6 +1,6 @@
 OASISFormat: 0.2
 Name:        qtest
-Version:     2.0.0
+Version:     2.1.0
 Synopsis:    qTest: inline unit tests extractor, from Batteries.
 Authors:     Vincent HUGOT
 License:     GPL-3.0
