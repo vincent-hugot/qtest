@@ -116,11 +116,11 @@ instance:
 *)
 ---------------------------
 
-the syntax is simple: `(*$` introduces a qtest ``pragma'', such as `T`
-in this case. `T` is by far the most common and represents a ``simple''
-unit test. `T` expects a ``header'', which is most of the time simply
+the syntax is simple: `(*$` introduces a qtest "pragma", such as `T`
+in this case. `T` is by far the most common and represents a "simple"
+unit test. `T` expects a "header", which is most of the time simply
 the name of the function under test, here `foo`. Following that, each
-line is a ``statement'', which must evaluate to `true` for the test to
+line is a "statement", which must evaluate to `true` for the test to
 pass. Furthermore, `foo` must appear in each statement.
 
 Now, in order to execute those tests, you need to extract them; this is
@@ -201,7 +201,7 @@ ocamlbuild -cflags -warn-error,+26 -use-ocamlfind -package oUnit footest.native
 === Different Kinds of Tests
 
 [[simple-tests-for-test]]
-==== Simple Tests: `T` for ``Test''
+==== Simple Tests: `T` for "Test"
 
 The most common kind of tests is the simple test, an example of which is
 given above. It is of the form
@@ -217,7 +217,7 @@ given above. It is of the form
 where each _statement_ must be a boolean OCaml expression involving the
 function (or functions, as we will see when we study headers) referenced
 in the __header__. The overall test is considered successful if each
-_statement_ evaluates to `true`. Note that the ``close comment'' `*)`
+_statement_ evaluates to `true`. Note that the "close comment" `*)`
 must appear on a line of its own.
 
 *Tip:* if a statement is a bit too long to fit on one line, if can be
@@ -253,8 +253,8 @@ little bit of boilerplate code. The bare syntax is:
 -------------
 
 However, used bare, an equality test will not provide much more
-information than a simple test: just a laconic ``not equal''. In order
-for the values to be printed, a ``value printer'' must be specified for
+information than a simple test: just a laconic "not equal". In order
+for the values to be printed, a "value printer" must be specified for
 the test. A printer is a function of type
 `'a -> string`, where `'a` is
 the type of the expressions on both side of the equality. To pass the
@@ -274,7 +274,7 @@ The failure report will now be more explicit, saying
 `expected: 20 but got: 30`.
 
 [[randomized-tests-for-quickcheck]]
-==== Randomized Tests: `Q` for ``Quickcheck''
+==== Randomized Tests: `Q` for "Quickcheck"
 
 Quickcheck is a small library useful for randomized unit tests. Using it
 is a bit more complex, but much more rewarding than simple tests.
@@ -400,7 +400,7 @@ let rec flu = function
 --------------------------------------------------------
 +
 The meaning of `~small:List.length` is therefore simply:
-    ``choose the shortest list''. For very complicated cases, you can simultaneously
+    "choose the shortest list". For very complicated cases, you can simultaneously
 increase `count` to yield an even higher-quality counterexample.
 
 Shrinking::
@@ -461,7 +461,7 @@ a good basis for more advanced generators.
 Printers can be defined using `Q.Print`, shrinkers using `Q.Shrink`.
 
 [[raw-ounit-tests-for-raw]]
-==== Raw OUnit Tests: `R` for ``Raw''
+==== Raw OUnit Tests: `R` for "Raw"
 
 When more specialised test pragmas are too restrictive, for instance if
 the test is too complex to reasonably fit on one line, then one can use
@@ -498,7 +498,7 @@ _probably_ a hint that the test is a bit complex and, maybe, belongs in
 a separate test suite rather than in the middle of the source code.
 
 [[exception-throwing-tests-for-exception]]
-==== Exception-Throwing Tests: `E` for ``Exception''
+==== Exception-Throwing Tests: `E` for "Exception"
 
 … not implemented yet…
 
@@ -524,7 +524,7 @@ Result.(catch foo x |> is_exn Bar)
 Not all qtest pragmas directly translate into tests; for non-trivial
 projects, sometimes a little boilerplate code is needed in order to set
 the tests up properly. The pragmas which do this are collectively called
-``manipulation pragmas''; they are described in the next section.
+"manipulation pragmas"; they are described in the next section.
 
 [[opening-modules-open-pragma-and-option]]
 === Opening Modules: _open_ Pragma `<...>` and `--preamble` Option
@@ -558,7 +558,7 @@ its _global_ form:
 +
 The modules will be open for every test in the same `.ml` file, and
 following the pragma. However, in our example, you will have a
-duplication of code between the ``open'' directives of `foo.ml`, and the
+duplication of code between the "open" directives of `foo.ml`, and the
 _open_ pragma of qtest, like so:
 +
 ---------------------
@@ -598,7 +598,7 @@ end
 -------------------------
 +
 That seems natural enough… but it won’t work, because qtest is not
-actually aware that the test is ``inside'' Submod (and making it aware
+actually aware that the test is "inside" Submod (and making it aware
 of that would be very problematic). In fact, so long as you use only
 test pragmas (ie. no manipulation pragma at all), the positions and even
 the order of the tests – respective to definitions or to each other –
@@ -660,8 +660,8 @@ condition somewhat. At the very least, it has to be defined
 __somewhere__. Failure to conform results in an
 `Error: Unbound value foo`.
 * `foo` is referenced in _each statement_ of the test: for `T` and `Q`,
-that means ``each line''. For `R`, that means ``once somewhere in the
-test’s body''. Failure to conform results in a
+that means "each line". For `R`, that means "once somewhere in the
+test’s body". Failure to conform results in a
 `Warning 26: unused variable foo`, which will be treated as an error if
 `-warn-error +26` is passed to the compiler. It goes without saying that
 this is warmly recommended.
@@ -755,10 +755,10 @@ Let us say that we have the following test:
 *)
 ----------------------------------------------------
 
-It involves both `even` and `odd`. That question is: ``what is a proper
-header for this test?'' One could simply put ``even'', and thus it would
+It involves both `even` and `odd`. That question is: "what is a proper
+header for this test?" One could simply put "even", and thus it would
 be referenced as being tested in the logs, but `odd` would not, which is
-unfair. Putting ``odd'' is symmetrically unfair. The solution is to put
+unfair. Putting "odd" is symmetrically unfair. The solution is to put
 both, separated by a semi-colon:
 
 [source,OCaml]
@@ -844,7 +844,7 @@ then it is equivalent to
 -----------------------------------
 
 so you do not need to alter the body of the test if you subsequently add
-new functions. A header which combines more than one ``version'' of a
+new functions. A header which combines more than one "version" of a
 function in this way is called a __metaheader__.
 
 [[metaheaders-unleashed]]
@@ -930,7 +930,7 @@ OPTIONS:
 --help          Displays this help page and stops
 ------------------------------------------------------------------------
 
-[[qtest-runtime-options]]c
+[[qtest-runtime-options]]
 === qtest Runtime Command-Line Options
 
 Test files generated by qtest also accept command line options, described
