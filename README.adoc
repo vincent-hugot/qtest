@@ -939,7 +939,7 @@ by `--help` if needed.
 ----
 $ qtest extract foo.ml -o footest.ml
 
-$ ocamlfind ocamlopt -package qtest2Lib -linkpkg footest.ml -o footest
+$ ocamlfind ocamlopt -package QTest2Lib -linkpkg footest.ml -o footest
 
 $ ./footest --help
 
