@@ -17,5 +17,5 @@ Library "QTest2Lib"
   Path:         .
   BuildTools:   ocamlbuild
   Modules:      Quickcheck, Runner
-  BuildDepends: oUnit, unix
+  BuildDepends: oUnit, unix, bytes
 

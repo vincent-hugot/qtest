@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: c9597e024238d09721e935e5a5d79083)
+# DO NOT EDIT (digest: 332c8a666a890da2e94710391e1f214a)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -16,9 +16,9 @@ true: annot, bin_annot
 "_darcs": not_hygienic
 # Executable qtest
 <qtest.{native,byte}>: pkg_bytes
-<*.ml{,i,y}>: pkg_bytes
 # Library QTest2Lib
 "QTest2Lib.cmxs": use_QTest2Lib
+<*.ml{,i,y}>: pkg_bytes
 <*.ml{,i,y}>: pkg_oUnit
 <*.ml{,i,y}>: pkg_unix
 # OASIS_STOP
