@@ -384,9 +384,11 @@ let printable_char = make_scalar ~print:(sprintf "%C") Gen.printable
 let numeral_char = make_scalar ~print:(sprintf "%C") Gen.numeral
 
 let string_gen_of_size size gen =
-  make ~small:String.length ~print:(sprintf "%S") (Gen.string_size ~gen size)
+  make ~shrink:Shrink.string ~small:String.length
+    ~print:(sprintf "%S") (Gen.string_size ~gen size)
 let string_gen gen =
-  make ~small:String.length ~print:(sprintf "%S") (Gen.string ~gen)
+  make ~shrink:Shrink.string ~small:String.length
+    ~print:(sprintf "%S") (Gen.string ~gen)
 
 let string = string_gen Gen.char
 let string_of_size size = string_gen_of_size size Gen.char
