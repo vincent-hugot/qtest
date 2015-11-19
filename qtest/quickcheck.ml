@@ -263,7 +263,7 @@ module Shrink = struct
   let string s yield =
     for i =0 to String.length s-1 do
       let s' = Bytes.init (String.length s-1)
-        (fun j -> if j<i then s.[j] else s.[j-1])
+        (fun j -> if j<i then s.[j] else s.[j+1])
       in
       yield (Bytes.unsafe_to_string s')
     done
