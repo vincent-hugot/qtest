@@ -1,0 +1,15 @@
+= HOWTO
+
+== Make a release
+
+[source,sh]
+----
+VERSION=42
+
+opam pin add "qtest.$VERSION" . -n
+
+opam-publish prepare qtest.$VERSION https://github.com/vincent-hugot/iTeML/archive/$VERSION.tar.gz
+
+opam-publish submit ./qtest.$VERSION
+
+----
