@@ -234,6 +234,6 @@ let strange_string = " \"
 *)
 
 
-(*$Q even & ~count:10
+(*$Q & ~count:10
   (Q.small_int_corners ()) (fun n-> n+3 -2 -1 = abs n)
 *)
