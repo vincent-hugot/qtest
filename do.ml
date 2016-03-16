@@ -9,7 +9,6 @@ let exec c = pl ("\n#### "^c^" ####\n");
   if command c <> 0 then failwith "failed command"
 
 let configure_qtest prefix = 
-  chdir "qtest";
   exec "oasis setup";
   exec ("ocaml setup.ml -configure" ^ if prefix<>"" then " --prefix " ^ prefix else "")
 

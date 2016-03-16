@@ -1,0 +1,6 @@
+S src
+S tests
+B _build/**
+PKG oUnit
+PKG bytes
+FLG -w +a-4-44
