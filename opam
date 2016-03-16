@@ -7,17 +7,18 @@ doc:
   "https://github.com/vincent-hugot/iTeML/blob/master/README.adoc#introduction"
 dev-repo: "git@github.com:vincent-hugot/iTeML.git"
 build: [
-  "ocaml" "do.ml" "qtest" "build" prefix
+  "./configure"
+  make "build"
 ]
 install: [
-  "ocaml" "do.ml" "qtest" "install" prefix
+  make "install"
 ]
 remove: [
-  "ocaml" "do.ml" "qtest" "remove" prefix
+  make "uninstall"
 ]
 depends: [
   "ocamlfind"
-  "oasis" {>= "0.2.0"}
+  "oasis" {build & >= "0.2.0"}
   "ounit"
   "ocamlbuild" {build}
 ]
