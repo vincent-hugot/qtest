@@ -16,15 +16,15 @@ Executable qtest
 Library qcheck
   Path:         src
   BuildTools:   ocamlbuild
-  Modules:      QCheck, Runner
+  Modules:      QCheck, QCheck_runner
   BuildDepends: oUnit, unix, bytes
 
-Executable "qcheck_ounit_example"
+Executable "runner_ounit_example"
   Path:         tests/
   Install:      false
   BuildTools:   ocamlbuild
   BuildDepends: qcheck
-  MainIs:       qCheck_ounit_test.ml
+  MainIs:       Runner_ounit_test.ml
 
 Document qcheck
   Title:                QCheck docs

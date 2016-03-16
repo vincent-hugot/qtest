@@ -1,3 +1,21 @@
+(*
+QCheck: Random testing for OCaml
+Copyright (C) 2016  Vincent Hugot, Simon Cruanes
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Library General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Library General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*)
+
 open OUnit
 
 let ps,pl = print_string,print_endline
@@ -48,14 +66,17 @@ let random_state () = match !st with
   | None -> assert false
   | Some st -> st
 
+let set_seed s =
+  seed := s;
+  Printf.printf "random seed: %d\n%!" s;
+  st := Some (Random.State.make [| s |])
+
 let setup_random_state_ () =
   let s = if !seed = ~-1 then (
       Random.self_init ();  (* make new, truly random seed *)
       Random.int (1 lsl 29);
   ) else !seed in
-  seed := s;
-  Printf.printf "random seed: %d\n%!" s;
-  st := Some (Random.State.make [| s |])
+  set_seed s
 
 (* Function which runs the given function and returns the running time
    of the function, and the original result in a tuple *)
@@ -63,6 +84,9 @@ let time_fun f x y =
   let begin_time = Unix.gettimeofday () in
   let res = f x y in (* evaluate this first *)
   Unix.gettimeofday () -. begin_time, res
+
+(* TODO: factor the CLI parsing out of {!run}, share it with {!run_tap},
+   use stuff from QCheck *)
 
 let run test =
   let print_list = ref false in
@@ -118,7 +142,7 @@ let run test =
   let running_time, results = time_fun perform_test hdl_event test in
   let (_s, f, o) = !_counter in
   let failures = List.filter not_success results in
-(*  assert (List.length failures = f);*)
+  (*  assert (List.length failures = f);*)
   ps "\r";
   print_result_list failures;
   assert (List.length results = total_tests);
@@ -151,3 +175,24 @@ let run_tap test =
   let total_tests = test_case_count test in
   pf "TAP version 13\n1..%d\n" total_tests;
   perform_test handle_event test
+
+open OUnit
+
+let next_name =
+  let i = ref 0 in
+  fun () ->
+    let name = "<anon prop> " ^ (string_of_int !i) in
+    incr i;
+    name
+
+let to_ounit_test t =
+  let msg =
+    match QCheck.name t with
+    | None -> next_name ()
+    | Some m -> m
+  in
+  msg >:: (fun _ -> assert_bool msg (QCheck.run t))
+
+let (>:::) name tests = name >::: (List.map to_ounit_test tests)
+
+let (~::) = to_ounit_test
