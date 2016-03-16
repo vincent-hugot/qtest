@@ -1,6 +1,9 @@
 opam-version: "1.2"
 maintainer: "Vincent Hugot <vincent.hugot@gmail.com>"
-authors: "Vincent Hugot <vincent.hugot@gmail.com>"
+authors: [
+  "Vincent Hugot <vincent.hugot@gmail.com>"
+  "Simon Cruanes <simon.cruanes.2007@m4x.org"
+]
 homepage: "https://github.com/vincent-hugot/iTeML"
 bug-reports: "https://github.com/vincent-hugot/iTeML/issues"
 doc:
@@ -21,5 +24,10 @@ depends: [
   "oasis" {build & >= "0.2.0"}
   "ounit"
   "ocamlbuild" {build}
+]
+tags: [
+  "test"
+  "property"
+  "quickcheck"
 ]
 available: [ocaml-version >= "4.00.0"]

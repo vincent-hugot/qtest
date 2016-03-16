@@ -9,6 +9,8 @@ v2.1
 developed internally for http://batteries.forge.ocamlcore.org/[the OCaml Batteries Included library] under the
 name *qtest*. It relies on http://ounit.forge.ocamlcore.org/[oUnit] as a testing framework, though users need not know anything about it for basic usage.
 
+It has been merged with https://github.com/c-cube/qcheck[Qcheck] in 2016.
+
 NOTE: *iTeML* stands for _Inline (Unit) Tests for OCaml_. +
   *qtest* stands for _Quick Testing_.
 
@@ -27,13 +29,12 @@ and basic support for Emacs. See the https://github.com/vincent-hugot/iTeML/tree
 
 *Manual installation:*
 
-Execute one of:
+    ./configure
+    make build install
 
-    ocaml do.ml qtest build   [prefix]
-    ocaml do.ml qtest install [prefix]
-    ocaml do.ml qtest remove  [prefix]
+To use a custom installation prefix, use
 
-OASIS will be used as backend. `[prefix]` is of course the installation prefix from the configuration phase.
+    ./configure --prefix <path>
 
 *Future works:*
 
@@ -56,8 +57,10 @@ and qtest2 currently covers most of the needs of the Batteries project.
    of new features. Syntax changes a bit.  (=qtest2)
  * Oct 21, 2012: qtest2 moves to its own repository.
  * Sept. 2015: Simon Cruanes contributes a significant improvement of the random generation process.
+ * March. 2016: Simon Cruanes merges `qcheck` into `qtest`
 
-Over time, the various versions of qtest have received https://github.com/vincent-hugot/iTeML/graphs/contributors[contributions] by:
+Over time, the various versions of qtest have
+received https://github.com/vincent-hugot/iTeML/graphs/contributors[contributions] by:
 Eric Norige, Gabriel Scherer, Cedric Cellier, Valentin Gatien-Baron, Max Mouratov,
 and Simon Cruanes.
 
@@ -65,7 +68,7 @@ and Simon Cruanes.
 
 The preferred way is to create a https://github.com/vincent-hugot/iTeML/issues/new[new issue] on GitHub.
 
-Current maintainer: https://github.com/vincent-hugot[Vincent Hugot].
+Current maintainer: https://github.com/c-cube[Simon Cruanes].
 
 
 '''

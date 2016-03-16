@@ -1,10 +1,10 @@
-OASISFormat: 0.2
+OASISFormat: 0.4
 Name:        qtest
 Version:     2.1.1
 Synopsis:    qTest: inline unit tests extractor, from Batteries.
 Authors:     Vincent HUGOT, Simon Cruanes
 License:     GPL-3.0
-Plugins:     META (0.2), DevFiles (0.3)
+Plugins:     META (0.4), DevFiles (0.4)
 
 Executable qtest
   Path:           src
@@ -13,9 +13,23 @@ Executable qtest
   BuildDepends:   bytes
   CompiledObject: best
 
-Library "QTest2Lib"
+Library "qcheck"
   Path:         src
   BuildTools:   ocamlbuild
-  Modules:      Quickcheck, Runner
+  Modules:      QCheck, Runner
   BuildDepends: oUnit, unix, bytes
 
+Executable "qcheck_ounit_example"
+  Path:         tests/
+  Install:      false
+  BuildTools:   ocamlbuild
+  BuildDepends: qcheck
+  MainIs:       qCheck_ounit_test.ml
+
+Document qcheck
+  Title:                QCheck docs
+  Type:                 ocamlbuild (0.3)
+  BuildTools:           ocamlbuild, ocamldoc
+  Install:              true
+  XOCamlbuildPath:      src
+  XOCamlbuildLibraries: qcheck

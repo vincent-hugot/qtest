@@ -1,0 +1,4 @@
+#directory "_build/src";;
+#load "qcheck.cma";;
+open QCheck;;
+(* vim: syntax=ocaml: *)
