@@ -3,7 +3,7 @@ Name:        qtest
 Version:     2.1.1
 Synopsis:    qTest: inline unit tests extractor, from Batteries.
 Authors:     Vincent HUGOT, Simon Cruanes
-License:     GPL-3.0
+License:     LGPL-3.0
 Plugins:     META (0.4), DevFiles (0.4)
 
 Executable qtest
@@ -13,7 +13,7 @@ Executable qtest
   BuildDepends:   bytes
   CompiledObject: best
 
-Library "qcheck"
+Library qcheck
   Path:         src
   BuildTools:   ocamlbuild
   Modules:      QCheck, Runner
