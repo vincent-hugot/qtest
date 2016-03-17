@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (** {1 Quickcheck inspired property-based testing} *)
 
+(* FIXME update doc *)
 (** The library takes inspiration from Haskell's QuickCheck library. The
 rough idea is that the programer describes invariants that values of
 a certain type need to satisfy ("properties"), as functions from this type
@@ -77,218 +78,106 @@ More complex and powerful combinators can be found in Gabriel Scherer's
 {{:http://gasche.github.io/random-generator/doc/Generator.html } here}.
 *)
 
-(** {2 Description of how to generate arbitrary values for some type} *)
-
-module Arbitrary : sig
-  type 'a t = Random.State.t -> 'a
-    (** A generator of arbitrary values of type 'a *)
-
-  val return : 'a -> 'a t
-    (** Return always the same value (e.g. [4]) *)
-
-  val int : int -> int t
-    (** Any integer between 0 (inclusive) and the given higher bound (exclusive) *)
-
-  val int_range : start:int -> stop:int -> int t
-    (* Integer range start .. stop-1 *)
-
-  val (--) : int -> int -> int t
-    (** Infix synonym for {!int_range} *)
-
-  val small_int : int t
-    (** Ints lower than 100 *)
-
-  val split_int : int t -> (int * int) t
-    (** [split_int gen] generates a number [n] from [gen], and
-        returns [i, j] where [i + j = n] *)
-
-  val bool : bool t
-    (** Arbitrary boolean *)
-
-  val char : char t
-    (** A (printable) char *)
-
-  val alpha : char t
-    (** Alphabetic char *)
-
-  val float : float -> float t
-    (** Random float *)
-
-  val string : string t
-    (** Random strings of small length *)
-
-  val string_len : int t -> string t
-    (** String of random length *)
-
-  val map : 'a t -> ('a -> 'b) -> 'b t
-    (** Transform an arbitrary into another *)
-
-  val map' : ('a -> 'b) -> 'a t -> 'b t
-    (** @since 0.3 *)
-
-  val list : ?len:int t -> 'a t -> 'a list t
-    (** List of arbitrary length. Default [len] is between 0 and 10. *)
-
-  val opt : 'a t -> 'a option t
-    (** May return a value, or None *)
-
-  val pair : 'a t -> 'b t -> ('a * 'b) t
-
-  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
-
-  val quad : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
-
-  val list_repeat : int -> 'a t -> 'a list t
-    (** Lists of given length exactly *)
-
-  val array : ?len:int t -> 'a t -> 'a array t
-    (** Random array of random length *)
-
-  val array_repeat : int -> 'a t -> 'a array t
-    (** Random array of given length *)
-
-  val among : 'a list -> 'a t
-    (** Choose an element among those of the list *)
-
-  val among_array : 'a array -> 'a t
-    (** Choose in the array *)
-
-  val shuffle : 'a array -> unit t
-    (** Shuffle the array in place
-        @since 0.3 *)
-
-  val choose : 'a t list -> 'a t
-    (** Choice among a list generators *)
-
-  val (|||) : 'a t -> 'a t -> 'a t
-    (** Choice among two generators. [a ||| b] is the same as [choose [a;b]]. *)
-
-  val fix : ?max:int -> base:'a t -> ('a t -> 'a t) -> 'a t
-    (** Recursive arbitrary values. The optional value [max] defines
-        the maximal depth, if needed (default 15). [base] is the base case. *)
-
-  val fix_depth : depth:int t -> base:'a t -> ('a t -> 'a t) -> 'a t
-    (** Recursive values of at most given random depth *)
-
-  val fail_fix : unit -> 'a
-    (** Function used to indicate that, in {!fix_fuel}, a sub-case is
-        impossible to fulfill.
-        @since 0.4 *)
-
-  (** What is a recursive case for a fueled fixpoint? *)
-  type 'a recursive_case =
-    [ `Base of 'a t
-      (** base case, no fuel *)
-
-    | `Base_fuel of (int -> 'a t)
-      (** base case, using fuel for its own purpose *)
-
-    | `Rec of ((int -> 'a list t) -> 'a t)
-      (** recursive case. must call the function exactly once *)
-
-    | `Rec_fuel of ((int -> 'a list t) -> int -> 'a t)
-      (** the function is given [self] and [max] and shall call [self i] exactly
-          once for some [i <= max]. *)
-
-    | `Rec1 of ('a t -> 'a t)
-      (** recursive case with exactly one subcase *)
-
-    | `Rec2 of ('a t -> 'a t -> 'a t)
-      (** recursive case with exactly two subcases *)
-    ]
-
-  val fix_fuel : 'a recursive_case list -> int -> 'a option t
-    (** [fix_fuel l fuel] consumes [fuel] in recursive subcases. The idea
-        is that [l] contains one or more recursive builders, such that
-        every [f] in [l] is given a function [f' : int -> 'a list t],
-        to call with an integer [n] so as to obtain [n] recursive subcases. The
-        function [f'] {b MUST} be called exactly once per case [f] in [l]..
-
-        @since 0.3 *)
-
-    (**Example:
-{[
-type tree = Node of tree * tree | Leaf of int;;
-
-let leaf_ x = Leaf x;;
-let node_ x y = Node (x,y);;
-
-let rand_tree =
-   fix_fuel [
-     `Base (small_int >|= leaf_);
-     `Rec (fun self ->
-        self 2 >>= function [x;y] ->
-        return (node_ x y))
-    ];;
-
-generate (rand_tree 20);;  (* generate trees with 20 nodes *)
-
-type tree' = Node2 of tree' * tree' | Node1 of tree' | Leaf' of int;;
-
-let leaf' x = Leaf' x ;;
-let node2 x y = Node2(x,y) ;;
-let node1 x = Node1 x;;
-
-(* alternative with [`Rec2] *)
-let rand_tree' =
-  fix_fuel [
-     `Base (small_int >|= leaf');
-     `Rec1 (fun self -> self >|= node1);
-     `Rec2 (fun self1 self2 -> pure node2 <*> self1 <*> self2)
-    ];;
-
-generate ~n:1 (rand_tree' 20);;
-]}
+val (==>) : bool -> bool -> bool
+(** [b1 ==> b2] is the logical implication [b1 => b2]
+    ie [not b1 || b2] (except that it is strict).
 *)
 
-  (** What is a recursive case for a general fueled fixpoint? *)
-  type ('a, 'state) general_recursive_case =
-    [ `Base of ('state -> 'a t)  (* base case, no fuel. *)
-    | `Base_fuel of (int -> 'state -> 'a t)  (* base case, using fuel for its own purpose *)
-    | `Rec of ((int -> ('state -> 'a) list t) -> 'state -> 'a t)  (* general recursive case. must call the function exactly once *)
-    | `Rec_fuel of ((int -> ('state -> 'a) list t) -> int -> 'state -> 'a t)
-    | `Rec1 of (('state -> 'a t) -> 'state -> 'a t) (* recursive case with exactly one subcase. *)
-    | `Rec2 of (('state -> 'a t) -> ('state -> 'a t) -> 'state -> 'a t) (* recursive case with exactly two subcases *)
-    ]
+(** {2 Generate Random Values} *)
+module Gen : sig
+  type 'a t = Random.State.t -> 'a
+  (** A random generator for values of type 'a *)
 
-  val fix_fuel_gen : ('a,'state) general_recursive_case list -> int -> 'state -> 'a option t
-    (** [fix_fuel_gen l state fuel] consumes [fuel] in recursive subcases, similar
-        to what [fix_fuel l fuel] would do, but more general because a
-        "state" is passed bottom-up. In recursive subcases,
-        is that [l] contains one or more recursive builders, such that
-        every [f] in [l] is given a function [f' : int -> ('state -> 'a) list t],
-        to call with an integer [n] so as to obtain [n] recursive subcases. The
-        function [f'] {b MUST} be called exactly once per case [f] in [l]..
+  type 'a sized = int -> Random.State.t -> 'a
+  (** Random generator with a size bound *)
 
-        @since 0.4 *)
-
-  val lift : ('a -> 'b) -> 'a t -> 'b t
-  val lift2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-  val lift3 : ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
-  val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> 'a t -> 'b t -> 'c t -> 'd t -> 'e t
-
+  val return : 'a -> 'a t
   val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
-    (** Monadic bind *)
-
-  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
-    (** @since 0.3 *)
-
   val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
-    (** @since 0.3 *)
+  val map : ('a -> 'b) -> 'a t -> 'b t
+  val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+  val map3 : ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
+  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
 
-  val pure : 'a -> 'a t
-    (** @since 0.3 *)
+  val oneof : 'a t list -> 'a t
+  val oneofl : 'a list -> 'a t
+  val oneofa : 'a array -> 'a t
+  val frequency : (int * 'a t) list -> 'a t
+  val frequencyl : (int * 'a) list -> 'a t
+  val frequencya : (int * 'a) array -> 'a t
 
-  val retry : 'a option t -> 'a t
-    (** Generate until a Some value is returned *)
+  val shuffle_a : 'a array -> unit t
+  (** Shuffle the array in place *)
 
-  val generate : ?n:int -> ?rand:Random.State.t -> 'a t -> 'a list
-    (** Generate [n] random values of the given type *)
+  val unit: unit t
+  val bool: bool t
+
+  val float: float t
+  val pfloat : float t (** positive float *)
+  val nfloat : float t (** negative float *)
+
+  val nat : int t (** small nat *)
+  val neg_int : int t (** negative int *)
+  val pint : int t (** positive uniform int *)
+  val int : int t (** uniform int *)
+  val small_int : int t (** Synonym to {!nat} *)
+  val int_bound : int -> int t (** Uniform within [0... bound] *)
+  val int_range : int -> int -> int t (** Uniform within [low,high] *)
+  val (--) : int -> int -> int t (** Synonym to {!int_range} *)
+
+  val ui32 : int32 t
+  val ui64 : int64 t
+
+  val list : 'a t -> 'a list t
+  val list_size : int t -> 'a t -> 'a list t
+  val list_repeat : int -> 'a t -> 'a list t
+
+  val array : 'a t -> 'a array t
+  val array_size : int t -> 'a t -> 'a array t
+  val array_repeat : int -> 'a t -> 'a array t
+
+  val opt : 'a t -> 'a option t
+
+  val pair : 'a t -> 'b t -> ('a * 'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
+  val quad : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
+
+  val char : char t
+  val printable : char t
+  val numeral : char t
+
+  val string_size : ?gen:char t -> int t -> string t
+  val string : ?gen:char t -> string t
+
+  val sized : 'a sized -> 'a t
+
+  val fix : ('a sized -> 'a sized) -> 'a sized (** Fixpoint; size decreases *)
+
+  (** Example:
+  {[
+  type tree = Leaf of int | Node of tree * tree
+
+  let leaf x = Leaf x
+  let node x y = Node (x,y)
+
+  let g = QCheck.Gen.(sized @@ fix
+    (fun self n -> match n with
+      | 0 -> map leaf nat
+      | n ->
+        frequency
+          [1, map leaf nat;
+           2, map2 node (self (n/2)) (self (n/2))]
+      ))
+
+  ]}
+
+  *)
 end
 
 (** {2 Pretty printing} *)
 
-module PP : sig
+(** {2 Show Values} *)
+module Print : sig
   type 'a t = 'a -> string
 
   val int : int t
@@ -296,6 +185,7 @@ module PP : sig
   val float : float t
   val char : char t
   val string : string t
+  val option : 'a t -> 'a option t
 
   val pair : 'a t -> 'b t -> ('a*'b) t
   val triple : 'a t -> 'b t -> 'c t -> ('a*'b*'c) t
@@ -303,6 +193,52 @@ module PP : sig
 
   val list : 'a t -> 'a list t
   val array : 'a t -> 'a array t
+end
+
+(** {2 Iterators}
+
+    Compatible with the library "sequence" *)
+module Iter : sig
+  type 'a t = ('a -> unit) -> unit
+
+  val empty : 'a t
+  val return : 'a -> 'a t
+  val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
+  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+  val map : ('a -> 'b) -> 'a t -> 'b t
+  val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
+  val append : 'a t -> 'a t -> 'a t
+  val (<+>) : 'a t -> 'a t -> 'a t (** Synonym to {!append} *)
+  val of_list : 'a list -> 'a t
+  val of_array : 'a array -> 'a t
+  val pair : 'a t -> 'b t -> ('a * 'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
+  val find : ('a -> bool) -> 'a t -> 'a option
+end
+
+(** {2 Shrink Values}
+
+    Shrinking is used to reduce the size of a counter-example. It tries
+    to make the counter-example smaller by decreasing it, or removing
+    elements, until the property to test holds again; then it returns the
+    smallest value that still made the test fail *)
+module Shrink : sig
+  type 'a t = 'a -> 'a Iter.t
+  (** Given a counter-example, return an iterator on smaller versions
+      of the counter-example *)
+
+  val nil : 'a t
+  (** No shrink *)
+
+  val int : int t
+  val option : 'a t -> 'a option t
+  val string : string t
+  val array : ?shrink:'a t -> 'a array t
+  val list : ?shrink:'a t -> 'a list t
+
+  val pair : 'a t -> 'b t -> ('a * 'b) t
+  val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
 end
 
 (** {2 Testing} *)
@@ -351,54 +287,281 @@ module Prop : sig
     (** Logical 'not' on tests *)
 end
 
-type 'a result =
-  | Ok of int * int  (** total number of tests / number of failed preconditions *)
-  | Failed of 'a list (** Failed instances *)
-  | Error of 'a option * exn  (** Error, and possibly instance that triggered it *)
+type 'a arbitrary = {
+  gen: 'a Gen.t;
+  print: ('a -> string) option; (** print values *)
+  small: ('a -> int) option;  (** size of example *)
+  shrink: ('a Shrink.t) option;  (** shrink to smaller examples *)
+  collect: ('a -> string) option;  (** map value to tag, and group by tag *)
+}
+(** a value of type ['a arbitrary] is an object with a method for generating random
+    values of type ['a], and additional methods to compute the size of values,
+    print them, and possibly shrink them into smaller counterexamples
+*)
 
-val check : ?call:('a -> bool -> unit) -> ?rand:Random.State.t -> ?n:int ->
-            'a Arbitrary.t -> 'a Prop.t -> 'a result
-(** Check that the property [prop] holds on [n] random instances of the type
-    'a, as generated by the arbitrary instance [gen]
-    @param call function called on each test case, with the result *)
+val make :
+  ?print:'a Print.t ->
+  ?small:('a -> int) ->
+  ?shrink:'a Shrink.t ->
+  ?collect:('a -> string) ->
+  'a Gen.t -> 'a arbitrary
+(** Builder for arbitrary. Default is to only have a generator, but other
+    arguments can be added *)
 
-(** {2 Main} *)
+val set_print : 'a Print.t -> 'a arbitrary -> 'a arbitrary
+val set_small : ('a -> int) -> 'a arbitrary -> 'a arbitrary
+val set_shrink : 'a Shrink.t -> 'a arbitrary -> 'a arbitrary
+val set_collect : ('a -> string) -> 'a arbitrary -> 'a arbitrary
 
-type test
+val choose : 'a arbitrary list -> 'a arbitrary
+(** Choose among the given list of generators. The list must not
+  be empty; if it is Invalid_argument is raised. *)
+
+val unit : unit arbitrary
+(** always generates [()], obviously. *)
+
+val bool : bool arbitrary
+(** uniform boolean generator *)
+
+val float : float arbitrary
+(* FIXME: does not generate nan nor infinity I think *)
+(** generates regular floats (no nan and no infinities) *)
+
+val pos_float : float arbitrary
+(** positive float generator (no nan and no infinities) *)
+
+val neg_float : float arbitrary
+(** negative float generator (no nan and no infinities) *)
+
+val int : int arbitrary
+(** int generator. Uniformly distributed *)
+
+val int_bound : int -> int arbitrary
+(** [int_bound n] is uniform between [0] and [n] included *)
+
+val int_range : int -> int -> int arbitrary
+(** [int_range a b] is uniform between [a] and [b] included. [b] must be
+    larger than [a]. *)
+
+val (--) : int -> int -> int arbitrary
+(** Synonym to {!int_range} *)
+
+val int32 : int32 arbitrary
+(** int32 generator. Uniformly distributed *)
+
+val int64 : int64 arbitrary
+(** int generator. Uniformly distributed *)
+
+val pos_int : int arbitrary
+(** positive int generator. Uniformly distributed *)
+
+val small_int : int arbitrary
+(** positive int generator. The probability that a number is chosen
+    is roughly an exponentially decreasing function of the number.
+*)
+
+val small_int_corners : unit -> int arbitrary
+(** As [small_int], but each newly created generator starts with
+ a list of corner cases before falling back on random generation. *)
+
+val neg_int : int arbitrary
+(** negative int generator. The distribution is similar to that of
+    [small_int], not of [pos_int].
+*)
+
+val char : char arbitrary
+(** Uniformly distributed on all the chars (not just ascii or
+    valid latin-1) *)
+
+val printable_char : char arbitrary
+(* FIXME: describe which subset *)
+(** uniformly distributed over a subset of chars *)
+
+val numeral_char : char arbitrary
+(** uniformy distributed over ['0'..'9'] *)
+
+val string_gen_of_size : int Gen.t -> char Gen.t -> string arbitrary
+
+val string_gen : char Gen.t -> string arbitrary
+(** generates strings with a distribution of length of [small_int] *)
+
+val string : string arbitrary
+(** generates strings with a distribution of length of [small_int]
+    and distribution of characters of [char] *)
+
+val string_of_size : int Gen.t -> string arbitrary
+(** generates strings with distribution of characters if [char] *)
+
+val printable_string : string arbitrary
+(** generates strings with a distribution of length of [small_int]
+    and distribution of characters of [printable_char] *)
+
+val printable_string_of_size : int Gen.t -> string arbitrary
+(** generates strings with distribution of characters of [printable_char] *)
+
+val numeral_string : string arbitrary
+(** generates strings with a distribution of length of [small_int]
+    and distribution of characters of [numeral_char] *)
+
+val numeral_string_of_size : int Gen.t -> string arbitrary
+(** generates strings with a distribution of characters of [numeral_char] *)
+
+val list : 'a arbitrary -> 'a list arbitrary
+(** generates lists with length generated by [small_int] *)
+
+val list_of_size : int Gen.t -> 'a arbitrary -> 'a list arbitrary
+(** generates lists with length from the given distribution *)
+
+val array : 'a arbitrary -> 'a array arbitrary
+(** generates arrays with length generated by [small_int] *)
+
+val array_of_size : int Gen.t -> 'a arbitrary -> 'a array arbitrary
+(** generates arrays with length from the given distribution *)
+
+val pair : 'a arbitrary -> 'b arbitrary -> ('a * 'b) arbitrary
+(** combines two generators into a generator of pairs *)
+
+val triple : 'a arbitrary -> 'b arbitrary -> 'c arbitrary -> ('a * 'b * 'c) arbitrary
+(** combines three generators into a generator of 3-uples *)
+
+val option : 'a arbitrary -> 'a option arbitrary
+(** choose between returning Some random value, or None *)
+
+val fun1 : 'a arbitrary -> 'b arbitrary -> ('a -> 'b) arbitrary
+(** generator of functions of arity 1.
+    The functions are always pure and total functions:
+    - when given the same argument (as decided by Pervasives.(=)), it returns the same value
+    - it never does side effects, like printing or never raise exceptions etc.
+    The functions generated are really printable.
+*)
+
+val fun2 : 'a arbitrary -> 'b arbitrary -> 'c arbitrary -> ('a -> 'b -> 'c) arbitrary
+(** generator of functions of arity 2. The remark about [fun1] also apply
+    here.
+*)
+
+val oneofl : ?print:'a Print.t -> ?collect:('a -> string) ->
+             'a list -> 'a arbitrary
+(** Pick an element randomly in the list *)
+
+val oneofa : ?print:'a Print.t -> ?collect:('a -> string) ->
+             'a array -> 'a arbitrary
+(** Pick an element randomly in the array *)
+
+val oneof : 'a arbitrary list -> 'a arbitrary
+(** Pick a generator among the list, randomly *)
+
+val always : ?print:'a Print.t -> 'a -> 'a arbitrary
+(** Always return the same element *)
+
+val frequency : ?print:'a Print.t -> ?small:('a -> int) ->
+                ?shrink:'a Shrink.t -> ?collect:('a -> string) ->
+                (int * 'a arbitrary) list -> 'a arbitrary
+(** Similar to {!oneof} but with frequencies *)
+
+val frequencyl : ?print:'a Print.t -> ?small:('a -> int) ->
+                (int * 'a) list -> 'a arbitrary
+(** Same as {!oneofl}, but each element is paired with its frequency in
+    the probability distribution (the higher, the more likely) *)
+
+val frequencya : ?print:'a Print.t -> ?small:('a -> int) ->
+                (int * 'a) array -> 'a arbitrary
+(** Same as {!frequencyl}, but with an array *)
+
+val map : ?rev:('b -> 'a) -> ('a -> 'b) -> 'a arbitrary -> 'b arbitrary
+(** [map f a] returns a new arbitrary instance that generates values using
+    [a#gen] and then transforms them through [f].
+    @param rev if provided, maps values back to type ['a] so that the printer,
+      shrinker, etc. of [a] can be used
+*)
+
+val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
+(** Specialization of [map] when the transformation preserves the type, which
+   makes shrinker, printer, etc. still relevant *)
+
+(** {2 Tests} *)
+
+module Test : sig
+  type 'a cell
   (** A single property test *)
 
-val name : test -> string option
+  val make_cell :
+    ?count:int -> ?max_gen:int -> ?max_fail:int ->
+    ?name:string -> 'a arbitrary -> ('a -> bool) -> 'a cell
+  (** [make arb prop] builds a test that checks property [prop] on instances
+      of the generator [arb].
+     @param name the name of the test
+     @param max_gen maximum number of times the generation function is called
+      to replace inputs that do not satisfy preconditions
+     @param max_fail maximum number of failures before we stop generating
+      inputs. This is useful if shrinking takes too much time.
+  *)
 
-val mk_test : ?n:int -> ?pp:'a PP.t -> ?name:string ->
-              ?size:('a -> int) -> ?limit:int ->
-              'a Arbitrary.t -> 'a Prop.t -> test
-  (** Construct a test. Optional parameters are the same as for {!run}.
-      @param name is the name of the property that is checked
-      @param pp is a pretty printer for failing instances
-      @out is the channel to print results onto
-      @n is the number of tests (default 100)
-      @rand is the random generator to use
-      @size is a size function on values on which tests are performed. If
-        the test fails and a size function is given, the smallest
-        counter-examples with respect to [size] will be printed in priority.
-      @limit maximal number of counter-examples that will get printed.
-        Default is [10]. *)
+  val get_arbitrary : 'a cell -> 'a arbitrary
+  val get_law : 'a cell -> ('a -> bool)
 
-val run : ?verbose:bool -> ?out:out_channel -> ?rand:Random.State.t ->
-          test -> bool
-  (** Run a test and print results *)
+  type t = Test : 'a cell -> t
 
-type suite = test list
-  (** A test suite is a list of tests *)
+  val make :
+    ?count:int -> ?max_gen:int -> ?max_fail:int ->
+    ?name:string -> 'a arbitrary -> ('a -> bool) -> t
+  (** [make arb prop] builds a test that checks property [prop] on instances
+      of the generator [arb].
+     @param name the name of the test
+     @param max_gen maximum number of times the generation function is called
+      to replace inputs that do not satisfy preconditions
+     @param max_fail maximum number of failures before we stop generating
+      inputs. This is useful if shrinking takes too much time.
+  *)
 
-val flatten : suite list -> suite
+  (** {6 Conversion of tests to OUnit Tests} *)
 
-val run_tests : ?verbose:bool -> ?out:out_channel -> ?rand:Random.State.t ->
-                suite -> bool
-(** Run a suite of tests, and print its results
-    @param verbose if true, prints more information about test cases (@since 0.4) *)
+  val to_ounit_test : ?verbose:bool -> t -> Random.State.t -> OUnit.test
+  (** [to_ounit_test st t] wraps [t] into a OUnit test, picking a fresh name
+      if the test did not provide any *)
 
-val run_main : ?argv:string array -> suite -> unit
-(** Can be used as the main function of a test file. Exits with a non-0 code
-    if the tests fail.
-    @since 0.4 *)
+  val (>:::) : string -> OUnit.test list -> OUnit.test
+
+  (** {6 Running the test} *)
+
+  type 'a result =
+    | Ok of int * int  (** total number of tests / number of failed preconditions *)
+    | Failed of 'a list (** Failed instances *)
+    | Error of 'a option * exn  (** Error, and possibly instance that triggered it *)
+
+  exception Test_fail of string list
+  (** Exception raised when a test failed, with the list of counter-examples *)
+
+  exception Test_error of string option * exn
+  (** Exception raised when a test raised an exception [e], with possibly
+      the sample that triggered the exception *)
+
+  val check_result : 'a arbitrary -> 'a result -> unit
+  (** [check_result arb res] checks that [res] is [Ok _], and returns unit.
+      Otherwise, it raises some exception
+      @raise Test_error if [res = Error _]
+      @raise Test_error if [res = Failed _] *)
+
+  val check_cell :
+    ?call:('a -> bool -> unit) -> ?verbose:bool ->
+    'a cell -> Random.State.t -> 'a result
+  (** [check test st] generates up to [count] random
+      values of type ['a] using [arbitrary] and the random state [st]. The
+      predicate [law] is called on them and if it returns [false] or raises an
+      exception then we have a counter example for the [law].
+
+      @param verbose if true, tests will print statistics about their
+       set of generated examples
+      @param small kept for compatibility reasons; if provided, replaces
+       the field [arbitrary.small].
+      @param call function called on each test case, with the result
+
+      @return the result of the test
+  *)
+
+  val check_exn :
+    ?verbose:bool -> t -> Random.State.t -> unit
+  (** Same as {!check_cell} but calls  {!check_result} on the result.
+      @raise Test_error if [res = Error _]
+      @raise Test_error if [res = Failed _] *)
+end

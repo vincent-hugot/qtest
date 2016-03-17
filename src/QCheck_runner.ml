@@ -176,6 +176,8 @@ let run_tap test =
   pf "TAP version 13\n1..%d\n" total_tests;
   perform_test handle_event test
 
+(* TODO: move to QCheck *)
+
 open OUnit
 
 let next_name =

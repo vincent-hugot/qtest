@@ -27,22 +27,21 @@ val set_seed : int -> unit
 (** Change the {!random_state} by creating a new one, initialized with
     the given seed. *)
 
-(** {2 Conversion of tests to OUnit Tests} *)
-
-val to_ounit_test : QCheck.test -> OUnit.test
-(** [to_ounit_test t] wraps [t] into a OUnit test, picking a fresh name
-    if the  test did not provide any *)
-
-val (>:::) : string -> QCheck.suite -> OUnit.test
-
-val (~::) : QCheck.test -> OUnit.test
-(** [~:: test] converts [test] into an OUnit test *)
-
 (** {2 Run functions} *)
 
-val run : OUnit.test -> int
+val run : ?argv:string array -> OUnit.test -> int
 (** [run test] runs the test, and returns an error code  that is [0]
     if all tests passed, [1] otherwise *)
 
 val run_tap : OUnit.test -> OUnit.test_results
 (** TAP-compatible test runner, in case we want to use a test harness *)
+
+val run_tests : ?verbose:bool -> ?out:out_channel -> ?rand:Random.State.t ->
+                QCheck.Test.t list -> bool
+(** Run a suite of tests, and print its results
+    @param verbose if true, prints more information about test cases (@since 0.4) *)
+
+val run_main : ?argv:string array -> QCheck.Test.t list -> unit
+(** Can be used as the main function of a test file. Exits with a non-0 code
+    if the tests fail.
+    @since 0.4 *)
