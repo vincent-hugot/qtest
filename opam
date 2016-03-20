@@ -10,14 +10,15 @@ doc:
   "https://github.com/vincent-hugot/iTeML/blob/master/README.adoc#introduction"
 dev-repo: "git@github.com:vincent-hugot/iTeML.git"
 build: [
-  "./configure"
-  make "build"
+  [ "./configure" "--bindir" "%{bin}%" ]
+  [ "make" "build" ]
 ]
 install: [
-  make "install"
+  "make" "install"
 ]
 remove: [
-  make "uninstall"
+  ["ocamlfind" "remove" "qcheck"]
+  ["rm" "%{bin}%/qtest"]
 ]
 depends: [
   "ocamlfind"
