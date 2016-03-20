@@ -109,6 +109,8 @@ module Gen : sig
   val shuffle_a : 'a array -> unit t
   (** Shuffle the array in place *)
 
+  val shuffle_l : 'a list -> 'a list t
+
   val unit: unit t
   val bool: bool t
 
@@ -241,51 +243,12 @@ module Shrink : sig
   val triple : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
 end
 
-(** {2 Testing} *)
+(** {2 Arbitrary}
 
-(** QCheck helps you test {b invariants}, or {b properties}. This submodule
-    helps dealing with such properties. A property of the ['a] type
-    is a predicate ['a -> bool].
-
-    If the property doesn't have to hold for all values of type ['a],
-    you can use {!Prop.assume} or {!Prop.assume_lazy} in the body
-    of the property. Doing so will "filter" irrelevant values
-    (the one which do not satisfy the assumption) out (in practice it raises
-    an exception).
-*)
-
-module Prop : sig
-  type 'a t = 'a -> bool
-
-  val (==>) : ('a -> bool) -> 'a t -> 'a t
-    (** Precondition for a test *)
-
-  val assume : bool -> unit
-    (** Assume the given precondition holds. A test won't fail if the
-        precondition (the boolean argument) is false, but it will be
-        discarded. Running tests counts how many instances were
-        discarded for not satisfying preconditions. *)
-
-  val assume_lazy : bool lazy_t -> unit
-    (** Assume the given (lazy) precondition holds. See {!assume}. *)
-
-  val raises : e:exn -> f:('a -> 'b) -> x:'a -> bool
-    (** [raise ~e ~f ~x] is true if and only if calling
-        [f x] raises the exception [exn].
-
-        For instance (on lists):
-        [let prop l = Prop.(assume (l = []); raises ~f:List.hd ~x:l ~e:(Failure "hd"));;]
-    *)
-
-  val (&&&) : 'a t -> 'a t -> 'a t
-    (** Logical 'and' on tests *)
-
-  val (|||) : 'a t -> 'a t -> 'a t
-    (** Logical 'or' on tests *)
-
-  val (!!!) : 'a t -> 'a t
-    (** Logical 'not' on tests *)
-end
+    A value of type ['a arbitrary] glues together a random generator,
+    and optional functions for shrinking, printing, computing the size,
+    etc. It is the "normal" way of describing how to generate
+    values of a given type, to be then used in tests (see {!Test}) *)
 
 type 'a arbitrary = {
   gen: 'a Gen.t;
@@ -297,6 +260,9 @@ type 'a arbitrary = {
 (** a value of type ['a arbitrary] is an object with a method for generating random
     values of type ['a], and additional methods to compute the size of values,
     print them, and possibly shrink them into smaller counterexamples
+
+    {b NOTE} the collect field is unstable and might be removed, or
+    moved into {!Test}.
 *)
 
 val make :
@@ -481,12 +447,34 @@ val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
 
 (** {2 Tests} *)
 
+module TestResult : sig
+  type 'a counter_ex = {
+    instance: 'a; (** The counter-example(s) *)
+    shrink_steps: int; (** How many shrinking steps for this counterex *)
+  }
+
+  type 'a failed_state = 'a counter_ex list
+
+  type 'a state =
+    | Success
+    | Failed of 'a failed_state (** Failed instances *)
+    | Error of 'a * exn  (** Error, and instance that triggered it *)
+
+  (* result returned by running a test *)
+  type 'a t = {
+    mutable state : 'a state;
+    mutable count: int;  (* number of tests *)
+    mutable count_gen: int; (* number of generated cases *)
+    collect_tbl: (string, int) Hashtbl.t lazy_t;
+  }
+end
+
 module Test : sig
   type 'a cell
   (** A single property test *)
 
   val make_cell :
-    ?count:int -> ?max_gen:int -> ?max_fail:int ->
+    ?count:int -> ?max_gen:int -> ?max_fail:int -> ?small:('a -> int) ->
     ?name:string -> 'a arbitrary -> ('a -> bool) -> 'a cell
   (** [make arb prop] builds a test that checks property [prop] on instances
       of the generator [arb].
@@ -495,72 +483,75 @@ module Test : sig
       to replace inputs that do not satisfy preconditions
      @param max_fail maximum number of failures before we stop generating
       inputs. This is useful if shrinking takes too much time.
+     @param small kept for compatibility reasons; if provided, replaces
+       the field [arbitrary.small].
   *)
 
   val get_arbitrary : 'a cell -> 'a arbitrary
   val get_law : 'a cell -> ('a -> bool)
+  val get_name : _ cell -> string option
+  val set_name : _ cell -> string -> unit
 
   type t = Test : 'a cell -> t
+  (** Same as ['a cell], but masking the type parameter. This allows to
+      put tests on different types in the same list of tests. *)
 
   val make :
-    ?count:int -> ?max_gen:int -> ?max_fail:int ->
+    ?count:int -> ?max_gen:int -> ?max_fail:int -> ?small:('a -> int) ->
     ?name:string -> 'a arbitrary -> ('a -> bool) -> t
   (** [make arb prop] builds a test that checks property [prop] on instances
       of the generator [arb].
-     @param name the name of the test
-     @param max_gen maximum number of times the generation function is called
-      to replace inputs that do not satisfy preconditions
-     @param max_fail maximum number of failures before we stop generating
-      inputs. This is useful if shrinking takes too much time.
+      See {!make_cell} for a description of the parameters.
   *)
-
-  (** {6 Conversion of tests to OUnit Tests} *)
-
-  val to_ounit_test : ?verbose:bool -> t -> Random.State.t -> OUnit.test
-  (** [to_ounit_test st t] wraps [t] into a OUnit test, picking a fresh name
-      if the test did not provide any *)
-
-  val (>:::) : string -> OUnit.test list -> OUnit.test
 
   (** {6 Running the test} *)
 
-  type 'a result =
-    | Ok of int * int  (** total number of tests / number of failed preconditions *)
-    | Failed of 'a list (** Failed instances *)
-    | Error of 'a option * exn  (** Error, and possibly instance that triggered it *)
+  exception Test_fail of string * string list
+  (** Exception raised when a test failed, with the list of counter-examples.
+      [Test_fail (name, l)] means test [name] failed on elements of [l] *)
 
-  exception Test_fail of string list
-  (** Exception raised when a test failed, with the list of counter-examples *)
+  exception Test_error of string * string * exn
+  (** Exception raised when a test raised an exception [e], with
+      the sample that triggered the exception.
+      [Test_error (name, i, e)] means [name] failed on [i] with exception [e] *)
 
-  exception Test_error of string option * exn
-  (** Exception raised when a test raised an exception [e], with possibly
-      the sample that triggered the exception *)
+  val print_instance : 'a arbitrary -> 'a -> string
+  val print_c_ex : 'a arbitrary -> 'a TestResult.counter_ex -> string
+  val print_fail : 'a arbitrary -> string -> 'a TestResult.counter_ex list -> string
+  val print_error : 'a arbitrary -> string -> 'a * exn -> string
+  val print_test_fail : string -> string list -> string
+  val print_test_error : string -> string -> exn -> string
 
-  val check_result : 'a arbitrary -> 'a result -> unit
-  (** [check_result arb res] checks that [res] is [Ok _], and returns unit.
+  val check_result : 'a cell -> 'a TestResult.t -> unit
+  (** [check_result cell res] checks that [res] is [Ok _], and returns unit.
       Otherwise, it raises some exception
       @raise Test_error if [res = Error _]
       @raise Test_error if [res = Failed _] *)
 
+  type 'a callback = string -> 'a cell -> 'a TestResult.t -> unit
+  (** Callback executed after each test has been run.
+      [f name cell res] means test [cell], named [name], gave [res] *)
+
   val check_cell :
-    ?call:('a -> bool -> unit) -> ?verbose:bool ->
-    'a cell -> Random.State.t -> 'a result
-  (** [check test st] generates up to [count] random
+    ?call:'a callback ->
+    rand:Random.State.t -> 'a cell -> 'a TestResult.t
+  (** [check ~rand test] generates up to [count] random
       values of type ['a] using [arbitrary] and the random state [st]. The
       predicate [law] is called on them and if it returns [false] or raises an
       exception then we have a counter example for the [law].
 
-      @param verbose if true, tests will print statistics about their
-       set of generated examples
-      @param small kept for compatibility reasons; if provided, replaces
-       the field [arbitrary.small].
       @param call function called on each test case, with the result
-
       @return the result of the test
   *)
 
-  val check_exn :
-    ?verbose:bool -> t -> Random.State.t -> unit
+  val check_cell_exn :
+    ?call:'a callback ->
+    rand:Random.State.t -> 'a cell -> unit
+  (** Same as {!check_cell} but calls  {!check_result} on the result.
+      @raise Test_error if [res = Error _]
+      @raise Test_error if [res = Failed _] *)
+
+  val check_exn : rand:Random.State.t -> t -> unit
   (** Same as {!check_cell} but calls  {!check_result} on the result.
       @raise Test_error if [res = Error _]
       @raise Test_error if [res = Failed _] *)

@@ -113,6 +113,11 @@ module Gen = struct
 
   let neg_int st = -(nat st)
 
+  let opt f st =
+    let p = RS.float st 1. in
+    if p < 0.15 then None
+    else Some (f st)
+
   (* Uniform random int generator *)
   let pint =
     if Sys.word_size = 32 then
@@ -148,14 +153,31 @@ module Gen = struct
   let list_size size gen st =
     foldn ~f:(fun acc _ -> (gen st)::acc) ~init:[] (size st)
   let list gen st = list_size nat gen st
+  let list_repeat n g = list_size (return n) g
 
   let array_size size gen st =
     Array.init (size st) (fun _ -> gen st)
   let array gen st = array_size nat gen st
+  let array_repeat n g = array_size (return n) g
 
-  let pair gen1 gen2 st = (gen1 st, gen2 st)
+  let shuffle_a a st =
+    for i = Array.length a-1 downto 1 do
+      let j = Random.State.int st (i+1) in
+      let tmp = a.(i) in
+      a.(i) <- a.(j);
+      a.(j) <- tmp;
+    done
 
-  let triple g1 g2 g3 st = (g1 st,g2 st, g3 st)
+  let shuffle_l l st =
+    let a = Array.of_list l in
+    shuffle_a a st;
+    Array.to_list a
+
+  let pair g1 g2 st = (g1 st, g2 st)
+
+  let triple g1 g2 g3 st = (g1 st, g2 st, g3 st)
+
+  let quad g1 g2 g3 g4 st = (g1 st, g2 st, g3 st, g4 st)
 
   let char st = char_of_int (RS.int st 255)
 
@@ -334,306 +356,6 @@ module Shrink = struct
     c z (fun z' -> yield (x,y,z'))
 end
 
-module Arbitrary = struct
-  type 'a t = Random.State.t -> 'a
-
-  let return x st = x
-
-  let int n st = Random.State.int st n
-
-  let int_range ~start ~stop st =
-    let n = stop - start in
-    if n <= 0
-      then 0
-      else start + Random.State.int st n
-
-  let (--) start stop = int_range ~start ~stop
-
-  let small_int = int 100
-
-  let split_int gen st =
-    let n = gen st in
-    if n > 0
-      then let i = Random.State.int st (n+1) in i, n-i
-      else 0, 0
-
-  let bool = Random.State.bool
-
-  let float f st = Random.State.float st f
-
-  let char st = Char.chr (Random.State.int st 128)
-
-  let alpha st =
-    Char.chr (Char.code 'a' + Random.State.int st (Char.code 'z' - Char.code 'a'))
-
-  let string_len len st =
-    let n = len st in
-    assert (n>=0);
-    let b = Buffer.create n in
-    for _i = 0 to n-1 do
-      Buffer.add_char b (alpha st)
-    done;
-    Buffer.contents b
-
-  let string st = string_len (int 10) st
-
-  let map ar f st = f (ar st)
-
-  let map' f ar st = f (ar st)
-
-  let rec _make_list ar st acc n =
-    if n = 0 then acc else
-      let x = ar st in
-      _make_list ar st (x::acc) (n-1)
-
-  let list ?(len=int 10) ar st =
-    let n = len st in
-    _make_list ar st [] n
-
-  let opt ar st =
-    if Random.State.bool st
-      then Some (ar st)
-      else None
-
-  let list_repeat len ar st =
-    _make_list ar st [] len
-
-  let array ?(len=int 10) ar st =
-    let n = len st in
-    Array.init n (fun _ -> ar st)
-
-  let array_repeat n ar st =
-    Array.init n (fun _ -> ar st)
-
-  let among_array a st =
-    if Array.length a < 1
-      then failwith "Arbitrary.among: cannot choose in empty array ";
-    let i = Random.State.int st (Array.length a) in
-    a.(i)
-
-  let shuffle a st =
-    for i = Array.length a-1 downto 1 do
-      let j = Random.State.int st (i+1) in
-      let tmp = a.(i) in
-      a.(i) <- a.(j);
-      a.(j) <- tmp;
-    done
-
-  let among l =
-    if List.length l < 1
-      then failwith "Arbitrary.among: cannot choose in empty list";
-    among_array (Array.of_list l)
-
-  let choose l = match l with
-    | [] -> failwith "cannot choose from empty list"
-    | [x] -> x
-    | _ ->
-      let a = Array.of_list l in
-      fun st ->
-        let i = Random.State.int st (Array.length a) in
-        a.(i) st
-
-  let (|||) a b st =
-    if Random.State.bool st
-      then a st
-      else b st
-
-  let fix ?(max=15) ~base f =
-    let rec ar = lazy
-      (fun depth st ->
-        if depth >= max || Random.State.int st max < depth
-          then base st (* base case. The deeper, the more likely. *)
-        else  (* recurse *)
-          let ar' = Lazy.force ar (depth+1) in
-          f ar' st)
-    in
-    Lazy.force ar 0
-
-  let fix_depth ~depth ~base f st =
-    let max = depth st in
-    fix ~max ~base f st
-
-  (* split fuel into two parts *)
-  let split_fuel fuel st =
-    let i = Random.State.int st (fuel+1) in
-    i, fuel-i
-
-  type 'a recursive_case =
-    [ `Base of 'a t
-    | `Base_fuel of (int -> 'a t)
-    | `Rec of ((int -> 'a list t) -> 'a t)
-    | `Rec_fuel of ((int -> 'a list t) -> int -> 'a t)
-    | `Rec1 of ('a t -> 'a t)
-    | `Rec2 of ('a t -> 'a t -> 'a t)
-    ]
-
-  let split_fuel_n n fuel st =
-    if fuel<0 || n < 1 then invalid_arg "split_int_n";
-    let rec split_rec n fuel acc = match n with
-      | 0 -> assert false
-      | 1 -> fuel::acc
-      | _ ->
-          let left, right = split_fuel fuel st in
-          (* divide and conquer *)
-          let acc = split_rec (n/2) left acc in
-          let acc = split_rec (n - n/2) right acc in
-          acc
-    in
-    let l = split_rec n fuel [] in
-    assert (List.length l = n);
-    l
-
-  exception RecursiveCallFailed
-
-  let fail_fix() = raise RecursiveCallFailed
-
-  let fix_fuel l =
-    assert (l<>[]);
-    let a = Array.of_list l in
-    (* fixpoint. Each element of [l] can ask for a given number of sub-cases
-      but only ONCE. *)
-    let rec fix fuel st =
-      shuffle a st;
-      first fuel 0 st
-    (* try each possibility. Each possibility must call exactly once
-      [fix] recursively on [n] cases ([n=0] for base cases) *)
-    and first fuel i st =
-      if i=Array.length a then raise RecursiveCallFailed
-      else
-        let fix' =
-          let is_first=ref true in
-          fun num st ->
-            if not !is_first
-              then failwith "fix_fuel: sub_case can be called only once";
-            is_first := false;
-
-            match fuel, num with
-            | 0, 0 -> []
-            | _, 0 -> raise RecursiveCallFailed (* didn't consume enough *)
-            | 0, _ -> raise RecursiveCallFailed (* not enough fuel *)
-            | _ ->
-                (* split fuel for subcases *)
-                assert (fuel>0);
-                (* if num>=fuel then raise RecursiveCallFailed; *)
-                let fuels = split_fuel_n num (fuel-1) st in
-                List.map (fun f -> fix f st) fuels
-        in
-        try
-          match a.(i) with
-          | `Base f when fuel=0 -> f st
-          | `Base _ -> raise RecursiveCallFailed (* didn't consume enough *)
-          | `Base_fuel f -> f fuel st (* yield *)
-          | `Rec f -> f fix' st
-          | `Rec_fuel f -> f fix' (fuel-1) st
-          | `Rec1 _ when fuel=0 -> raise RecursiveCallFailed
-          | `Rec1 f -> f (fix (fuel-1)) st
-          | `Rec2 _ when fuel<2 -> raise RecursiveCallFailed
-          | `Rec2 f ->
-              let fuel1, fuel2 = split_fuel (fuel-1) st in
-              f (fix fuel1) (fix fuel2) st
-        with RecursiveCallFailed ->
-          first fuel (i+1) st  (* try next *)
-    in
-    fun fuel st ->
-      try Some (fix fuel st)
-      with RecursiveCallFailed -> None
-
-  type ('a, 'state) general_recursive_case =
-    [ `Base of ('state -> 'a t)
-    | `Base_fuel of (int -> 'state -> 'a t)
-    | `Rec of ((int -> ('state -> 'a) list t) -> 'state -> 'a t)
-    | `Rec_fuel of ((int -> ('state -> 'a) list t) -> int -> 'state -> 'a t)
-    | `Rec1 of (('state -> 'a t) -> 'state -> 'a t)
-    | `Rec2 of (('state -> 'a t) -> ('state -> 'a t) -> 'state -> 'a t)
-    ]
-
-  let fix_fuel_gen (l:('a,'state) general_recursive_case list) =
-    assert (l<>[]);
-    let a = Array.of_list l in
-    (* fixpoint. Each element of [l] can ask for a given number of sub-cases
-      but only ONCE. *)
-    let rec fix fuel state st =
-      shuffle a st;
-      first fuel state 0 st
-    (* try each possibility. Each possibility must call exactly once
-      [fix] recursively on [n] cases ([n=0] for base cases) *)
-    and first fuel state i st =
-      if i=Array.length a then raise RecursiveCallFailed
-      else
-        let fix' =
-          let is_first=ref true in
-          fun num st ->
-            if not !is_first
-              then failwith "fix_fuel: sub_case can be called only once";
-            is_first := false;
-
-            match fuel, num with
-            | 0, 0 -> []
-            | _, 0 -> raise RecursiveCallFailed (* didn't consume enough *)
-            | 0, _ -> raise RecursiveCallFailed (* not enough fuel *)
-            | _ ->
-                (* split fuel for subcases *)
-                assert (fuel>0);
-                if num >= fuel then raise RecursiveCallFailed;
-                let fuels = split_fuel_n num (fuel-1) st in
-                List.map (fun f state -> fix f state st) fuels
-        in
-        try
-          match a.(i) with
-          | `Base f when fuel=0 -> f state st
-          | `Base _ -> raise RecursiveCallFailed (* didn't consume enough *)
-          | `Base_fuel f -> f fuel state st (* yield *)
-          | `Rec f -> f fix' state st
-          | `Rec_fuel f -> f fix' fuel state st
-          | `Rec1 _ when fuel=0 -> raise RecursiveCallFailed
-          | `Rec1 f -> f (fix (fuel-1)) state st
-          | `Rec2 _ when fuel<2 -> raise RecursiveCallFailed
-          | `Rec2 f ->
-              let fuel1, fuel2 = split_fuel (fuel-1) st in
-              f (fix fuel1) (fix fuel2) state st
-        with RecursiveCallFailed ->
-          first fuel state (i+1) st  (* try next *)
-    in
-    fun fuel state st ->
-      try Some (fix fuel state st)
-      with RecursiveCallFailed -> None
-
-  let rec retry gen st = match gen st with
-    | None -> retry gen st
-    | Some x -> x
-
-  let lift f a st = f (a st)
-
-  let lift2 f a b st = f (a st) (b st)
-
-  let lift3 f a b c st = f (a st) (b st) (c st)
-
-  let lift4 f a b c d st = f (a st) (b st) (c st) (d st)
-
-  let pair a b = lift2 (fun x y -> x,y) a b
-
-  let triple a b c = lift3 (fun x y z -> x,y,z) a b c
-
-  let quad a b c d = lift4 (fun x y z w -> x,y,z,w) a b c d
-
-  let (>>=) a f st =
-    let x = a st in
-    f x st
-
-  let (>|=) a f st = f (a st)
-
-  let (<*>) f x st = f st (x st)
-
-  let pure x _st = x
-
-  let generate ?(n=100) ?(rand=Random.State.make_self_init()) gen =
-    let l = ref [] in
-    for i = 0 to n-1 do
-      l := (gen rand) :: !l
-    done;
-    !l
-end
-
 type 'a arbitrary = {
   gen: 'a Gen.t;
   print: ('a -> string) option; (** print values *)
@@ -769,10 +491,7 @@ let triple a b c =
     (Gen.triple a.gen b.gen c.gen)
 
 let option a =
-  let g f st =
-    let p = RS.float st 1. in
-    if p < 0.15 then None
-    else Some (f st)
+  let g = Gen.opt a.gen
   and shrink = _opt_map a.shrink ~f:Shrink.option
   and small =
     _opt_map_or a.small ~d:(function None -> 0 | Some _ -> 1)
@@ -782,7 +501,7 @@ let option a =
     ~small
     ?shrink
     ?print:(_opt_map ~f:Print.option a.print)
-    (g a.gen)
+    g
 
 (* TODO: explain black magic in this!! *)
 let fun1 : 'a arbitrary -> 'b arbitrary -> ('a -> 'b) arbitrary =
@@ -859,80 +578,137 @@ let map ?rev f a =
 let map_same_type f a =
   adapt_ a (fun st -> f (a.gen st))
 
-type 'a failed_state = {
-  counter_ex: 'a; (** The counter-example itself *)
-  shrink_steps: int; (** How many shrinking steps for this counterex *)
-  failures_num: int; (** Number of counter-examples found *)
-}
-
-type 'a result_state =
-  | Success
-  | Failed of 'a failed_state
-
-(* result returned by [laws] *)
-type 'a result = {
-  mutable res_state : 'a result_state;
-  mutable res_count: int;  (* number of tests *)
-  mutable res_gen: int; (* number of generated cases *)
-  res_collect: (string, int) Hashtbl.t lazy_t;
-}
-
-let fail ?small ~steps res i = match res.res_state with
-  | Success ->
-      res.res_state <- Failed {counter_ex=i; shrink_steps=steps; failures_num=1}
-  | Failed f ->
-      match small with
-      | Some small when small i < small f.counter_ex ->
-          res.res_state <- Failed {
-            counter_ex=i;
-            failures_num=f.failures_num+1;
-            shrink_steps=steps;
-          }
-      | _ ->
-          res.res_state <- Failed {f with failures_num=f.failures_num+1}
-
-module LawsState = struct
-  (* state required by [laws] to execute *)
-  type 'a t = {
-    arb: 'a arbitrary;
-    func: 'a -> bool;
-    st: Random.State.t;
-    res: 'a result;
-    mutable num: int;  (** number of iterations to do *)
-    mutable max_gen: int; (** maximum number of generations allowed *)
-    mutable max_fail: int; (** maximum number of counter-examples allowed *)
+module TestResult = struct
+  type 'a counter_ex = {
+    instance: 'a; (** The counter-example(s) *)
+    shrink_steps: int; (** How many shrinking steps for this counterex *)
   }
 
-  let is_done state = state.num <= 0 || state.max_gen <= 0
+  type 'a failed_state = 'a counter_ex list
+
+  type 'a state =
+    | Success
+    | Failed of 'a failed_state (** Failed instances *)
+    | Error of 'a * exn  (** Error, and instance that triggered it *)
+
+  (* result returned by running a test *)
+  type 'a t = {
+    mutable state : 'a state;
+    mutable count: int;  (* number of tests *)
+    mutable count_gen: int; (* number of generated cases *)
+    collect_tbl: (string, int) Hashtbl.t lazy_t;
+  }
+
+  (* indicate failure on the given [instance] *)
+  let fail ?small ~steps:shrink_steps res instance =
+    let c_ex = {instance; shrink_steps; } in
+    match res.state with
+    | Success -> res.state <- Failed [ c_ex ]
+    | Error (x, e) ->
+        res.state <- Error (x,e); (* same *)
+    | Failed [] -> assert false
+    | Failed (c_ex' :: _ as l) ->
+        match small with
+        | Some small ->
+            (* all counter-examples in [l] have same size according to [small],
+               so we just compare to the first one, and we enforce
+               the invariant *)
+            begin match Pervasives.compare (small instance) (small c_ex'.instance) with
+            | 0 -> res.state <- Failed (c_ex :: l) (* same size: add [c_ex] to [l] *)
+            | n when n<0 -> res.state <- Failed [c_ex] (* drop [l] *)
+            | _ -> () (* drop [c_ex], not small enough *)
+            end
+        | _ ->
+            (* no [small] function, keep all counter-examples *)
+            res.state <-
+              Failed (c_ex :: l)
+
+  let error res instance e =
+    res.state <- Error (instance, e)
+end
+
+module Test = struct
+  type 'a cell = {
+    count : int; (* number of tests to do *)
+    max_gen : int; (* max number of instances to generate (>= count) *)
+    max_fail : int; (* max number of failures *)
+    law : 'a -> bool; (* the law to check *)
+    arb : 'a arbitrary; (* how to generate/print/shrink instances *)
+    mutable name : string option; (* name of the law *)
+  }
+
+  type t = | Test : 'a cell -> t
+
+  let get_name {name; _} = name
+  let set_name c name = c.name <- Some name
+  let get_law {law; _} = law
+  let get_arbitrary {arb; _} = arb
+
+  let default_count = 100
+  let default_max_gen = 300
+
+  let make_cell ?(count=default_count) ?(max_gen=default_max_gen)
+  ?max_fail ?small ?name arb law
+  =
+    let arb = match small with None -> arb | Some f -> set_small f arb in
+    let max_fail = match max_fail with None -> count | Some x -> x in
+    {
+      law;
+      arb;
+      max_gen;
+      max_fail;
+      name;
+      count;
+    }
+
+  let make ?count ?max_gen ?max_fail ?small ?name arb law =
+    Test (make_cell ?count ?max_gen ?max_fail ?small ?name arb law)
+
+
+  (** {6 Running the test} *)
+
+  module R = TestResult
+
+  (* state required by {!check} to execute *)
+  type 'a state = {
+    test: 'a cell;
+    rand: Random.State.t;
+    mutable res: 'a TestResult.t;
+    mutable cur_count: int;  (** number of iterations to do *)
+    mutable cur_max_gen: int; (** maximum number of generations allowed *)
+    mutable cur_max_fail: int; (** maximum number of counter-examples allowed *)
+  }
+
+  let is_done state = state.cur_count <= 0 || state.cur_max_gen <= 0
 
   let decr_count state =
-    state.res.res_count <- state.res.res_count + 1;
-    state.num <- state.num - 1
+    state.res.R.count <- state.res.R.count + 1;
+    state.cur_count <- state.cur_count - 1
 
   let new_input state =
-    state.res.res_gen <- state.res.res_gen + 1;
-    state.max_gen <- state.max_gen - 1;
-    state.arb.gen state.st
+    state.res.R.count_gen <- state.res.R.count_gen + 1;
+    state.cur_max_gen <- state.cur_max_gen - 1;
+    state.test.arb.gen state.rand
 
   (* statistics on inputs *)
-  let collect st i = match st.arb.collect with
+  let collect st i = match st.test.arb.collect with
     | None -> ()
     | Some f ->
         let key = f i in
-        let (lazy tbl) = st.res.res_collect in
+        let (lazy tbl) = st.res.R.collect_tbl in
         let n = try Hashtbl.find tbl key with Not_found -> 0 in
         Hashtbl.replace tbl key (n+1)
 
   (* try to shrink counter-ex [i] into a smaller one. Returns
      shrinked value and number of steps *)
   let shrink st i =
-    let rec shrink_ st i ~steps = match st.arb.shrink with
+    let rec shrink_ st i ~steps = match st.test.arb.shrink with
       | None -> i, steps
       | Some f ->
         let i' = Iter.find
           (fun x ->
             try
-              not (st.func x)
+              not (st.test.law x)
             with FailedPrecondition -> false
             | _ -> true (* fail test (by error) *)
           ) (f i)
@@ -942,242 +718,120 @@ module LawsState = struct
         | Some i' -> shrink_ st i' ~steps:(steps+1) (* shrink further *)
     in
     shrink_ ~steps:0 st i
-end
 
-module S = LawsState
+  (* [check_state iter gen func] applies [func] repeatedly ([iter] times)
+      on output of [gen], and if [func] ever returns false, then the input that
+      caused the failure is returned in [Failed].
+      If [func input] raises [FailedPrecondition] then  the input is discarded, unless
+         max_gen is 0.
+      @param max_gen max number of times [gen] is called to replace inputs
+        that fail the precondition *)
+  let rec check_state state =
+    if is_done state then state.res
+    else
+      let input = new_input state in
+      collect state input;
+      try
+        if state.test.law input
+        then (
+          (* one test ok *)
+          decr_count state;
+          check_state state
+        ) else handle_fail state input
+      with
+      | FailedPrecondition when state.cur_max_gen > 0 -> check_state state
+      | e -> handle_exn state input e
+  (* test failed on [input], which means the law is wrong. Continue if
+     we should. *)
+  and handle_fail state input =
+    (* first, shrink *)
+    let input, steps = shrink state input in
+    (* fail *)
+    decr_count state;
+    state.cur_max_fail <- state.cur_max_fail - 1;
+    R.fail state.res ~steps input;
+    if _is_some state.test.arb.small && state.cur_max_fail > 0
+      then check_state state
+      else state.res
+  (* test raised [e] on [input]; stop immediately *)
+  and handle_exn state input e =
+    R.error state.res input e;
+    state.res
 
-(** [laws iter gen func] applies [func] repeatedly ([iter] times) on output of [gen], and
-    if [func] ever returns false, then the input that caused the failure is returned
-    in [Failed].
-    If [func input] raises [FailedPrecondition] then  the input is discarded, unless
-       max_gen is 0.
-    @param max_gen max number of times [gen] is called to replace inputs
-      that fail the precondition *)
-let rec laws state =
-  if S.is_done state then state.S.res
-  else
-    let input = S.new_input state in
-    S.collect state input;
-    try
-      if state.S.func input
-      then (
-        (* one test ok *)
-        S.decr_count state;
-        laws state
-      ) else handle_fail state input
-    with
-    | FailedPrecondition when state.S.max_gen > 0 -> laws state
-    | _ -> handle_fail state input
-and handle_fail state input =
-  (* first, shrink *)
-  let input, steps = S.shrink state input in
-  (* fail *)
-  S.decr_count state;
-  state.S.max_fail <- state.S.max_fail - 1;
-  fail state.S.res ~steps input;
-  if _is_some state.S.arb.small && state.S.max_fail > 0
-    then laws state
-    else state.S.res
+  type 'a callback = string -> 'a cell -> 'a TestResult.t -> unit
 
-let default_count = 100
-let default_max_gen = 300
+  let callback_nil_ _ _ _ = ()
 
-let no_print_ _ = "<no printer>"
-
-let verbose = ref false
-
-(** Like laws, but throws an exception instead of returning an option.  *)
-let laws_exn ?small ?(count=default_count) ?(max_gen=default_max_gen) ?max_fail name a func st =
-  let a = match small with None -> a | Some f -> set_small f a in
-  let max_fail = match max_fail with None -> count | Some x -> x in
-  let state = {S.
-    func;
-    st;
-    arb = a;
-    max_gen;
-    max_fail;
-    num = count;
-    res = {
-      res_state=Success; res_count=0; res_gen=0;
-      res_collect=lazy (Hashtbl.create 10);
-    };
-  } in
-  let result = laws state in
-  if !verbose then (
-    Printf.printf "\rlaw %s: %d relevant cases (%d total)\n"
-      name result.res_count result.res_gen;
-    begin match a.collect with
-    | None -> ()
-    | Some _ ->
-        let (lazy tbl) = result.res_collect in
-        Hashtbl.iter
-          (fun case num -> Printf.printf "\r  %s: %d cases\n" case num)
-          tbl
-    end;
-    flush stderr;
-  );
-  match result.res_state with
-    | Success -> ()
-    | Failed f ->
-        let pp = match a.print with None -> no_print_ | Some x -> x in
-        let msg = Printf.sprintf "law %s failed on %d cases. Ex: %s%s"
-          name f.failures_num (pp f.counter_ex)
-            (if f.shrink_steps > 0
-              then Printf.sprintf " (after %d shrink steps)" f.shrink_steps else "")
-        in
-        failwith msg
-
-
-
-(* XXX cut here *)
-
-module Test = struct
-  type 'a result =
-    | Ok of int * int  (* total number / precond failed *)
-    | Failed of 'a list
-    | Error of 'a option * exn
-
-  (* random seed, for repeatability of tests *)
-  let __seed = [| 89809344; 994326685; 290180182 |]
-
-  let check ?(call=fun _ _ -> ()) ?(rand=Random.State.make __seed) ?(n=100) gen prop =
-    let precond_failed = ref 0 in
-    let failures = ref [] in
-    let inst = ref None in
-    try
-      for i = 0 to n - 1 do
-        let x = gen rand in
-        inst := Some x;
-        try
-          let res = prop x in
-          call x res;
-          if not res
-            then failures := x :: !failures
-        with Prop.PrecondFail ->
-          incr precond_failed
-      done;
-      match !failures with
-      | [] -> Ok (n, !precond_failed)
-      | _ -> Failed (!failures)
-    with e ->
-      Error (!inst, e)
-
-  (** {2 Main} *)
-
-  type 'a test_cell = {
-    n : int;
-    pp : 'a PP.t option;
-    prop : 'a Prop.t;
-    gen : 'a Arbitrary.t;
-    name : string option;
-    limit : int;
-    size : ('a -> int) option;
-  }
-  type test =
-    | Test : 'a test_cell -> test
-    (** GADT needed for the existential type *)
-
-  let name (Test {name; _}) = name
-
-  let display_name {name; _} =
-    match name with
-    | None -> "<anon prop>"
+  let name_ cell = match cell.name with
+    | None -> "<test>"
     | Some n -> n
 
-  let mk_test ?(n=100) ?pp ?name ?size ?(limit=10) gen prop =
-    if limit < 0 then failwith "QCheck: limit needs be >= 0";
-    if n <= 0 then failwith "QCheck: n needs be >= 0";
-    Test { prop; gen; name; n; pp; size; limit; }
+  (* main checking function *)
+  let check_cell ?(call=callback_nil_) ~rand cell =
+    let state = {
+      test=cell;
+      rand;
+      cur_count=cell.count;
+      cur_max_gen=cell.max_gen;
+      cur_max_fail=cell.max_fail;
+      res = {R.
+        state=R.Success; count=0; count_gen=0;
+        collect_tbl=lazy (Hashtbl.create 10);
+      };
+    } in
+    let res = check_state state in
+    call (name_ cell) cell res;
+    res
 
-  (* tail call version of take, that returns (at most) [n] elements of [l] *)
-  let rec _list_take acc l n = match l, n with
-    | _, 0
-    | [], _ -> List.rev acc
-    | x::l', _ -> _list_take (x::acc) l' (n-1)
+  exception Test_fail of string * string list
+  exception Test_error of string * string * exn
 
-  let run ?(verbose=false) ?(out=stdout) ?(rand=Random.State.make __seed) (Test test) =
-    Printf.fprintf out "testing property %s...\n" (display_name test);
-    (* called on each test case *)
-    let call x res =
-      match test.pp, verbose with
-      | Some pp, true ->
-        Printf.fprintf out "  test case (%s): %s\n"
-          (if res then "ok" else "failed") (pp x)
-      | _ -> ()
+  (* print instance using [arb] *)
+  let print_instance arb i = match arb.print with
+    | None -> "<instance>"
+    | Some pp -> pp i
+
+  let print_c_ex arb c =
+    if c.R.shrink_steps > 0
+    then Printf.sprintf "%s (after %d shrink steps)"
+      (print_instance arb c.R.instance) c.R.shrink_steps
+    else print_instance arb c.R.instance
+
+  let pp_print_test_fail name out l =
+    let rec pp_list out = function
+      | [] -> ()
+      | [x] -> Format.fprintf out "%s@," x
+      | x :: y -> Format.fprintf out "%s@,%a" x pp_list y
     in
-    match check ~call ~rand ~n:test.n test.gen test.prop with
-    | Ok (n, prefail) ->
-      Printf.fprintf out "  [✔] passed %d tests (%d preconditions failed)\n" n prefail;
-      true
-    | Failed l ->
-      begin match test.pp with
-      | None -> Printf.fprintf out "  [×] %d failures over %d\n" (List.length l) test.n
-      | Some pp ->
-        Printf.fprintf out "  [×] %d failures over %d (print at most %d):\n"
-          (List.length l) test.n test.limit;
-        let to_print = match test.size with
-        | None -> l
-        | Some size ->
-          (* sort by increasing size *)
-          let l = List.map (fun x -> x, size x) l in
-          let l = List.sort (fun (x,sx) (y,sy) -> sx - sy) l in
-          List.map fst l
-        in
-        (* only keep [limit] counter examples *)
-        let to_print = _list_take [] to_print test.limit in
-        (* print the counter examples *)
-        List.iter
-          (fun x -> Printf.fprintf out "  %s\n" (pp x))
-          to_print
-      end;
-      false
-    | Error (inst, e) ->
-      begin match inst, test.pp with
-      | _, None
-      | None, _ -> Printf.fprintf out "  [×] error: %s\n" (Printexc.to_string e);
-      | Some x, Some pp ->
-        (* print instance on which the error occurred *)
-        Printf.fprintf out "  [×] error on instance %s: %s\n"
-          (pp x) (Printexc.to_string e);
-      end;
-      false
+    Format.fprintf out "@[<hv2>test `%s` failed on ≥ %d cases:@ @[<v>%a@]@]"
+      name (List.length l) pp_list l
 
-  type suite = test list
+  let asprintf fmt =
+    let buf = Buffer.create 128 in
+    let out = Format.formatter_of_buffer buf in
+    Format.kfprintf (fun _ -> Buffer.contents buf) out fmt
 
-  let flatten = List.flatten
+  let print_test_fail name l = asprintf "@[<2>%a@]" (pp_print_test_fail name) l
 
-  let run_tests ?(verbose=false) ?(out=stdout) ?(rand=Random.State.make __seed) l =
-    let start = Unix.gettimeofday () in
-    let n = List.length l in
-    let failed = ref 0 in
-    Printf.fprintf out "check %d properties...\n" (List.length l);
-    List.iter
-      (fun test ->
-        let res = run ~verbose ~out ~rand test in
-        flush out;
-        if not res then incr failed)
-      l;
-    Printf.fprintf out "tests run in %.2fs\n" (Unix.gettimeofday() -. start);
-    if !failed = 0
-      then Printf.fprintf out "[✔] Success! (passed %d tests)\n" n
-      else Printf.fprintf out "[×] Failure. (%d tests failed over %d)\n" !failed n;
-    !failed = 0
+  let print_test_error name i e =
+    Format.sprintf "test `%s` raised exception `%s` on %s"
+      name (Printexc.to_string e) i
 
-  let run_main ?(argv=Sys.argv) l =
-    let verbose = ref false in
-    let seed = ref (Random.self_init (); Random.int (1 lsl 29)) in
-    let opts = Arg.align
-        [ "-v", Arg.Set verbose, " verbose"
-        ; "-seed", Arg.Set_int seed, " set random seed"
-        ]
-    in
-    try
-      Arg.parse_argv argv opts (fun _ -> invalid_arg "no arguments accepted") "usage: ./tests";
-      Printf.printf "use random seed %d\n" !seed;
-      let rand = Random.State.make [| !seed |] in
-      let ok = run_tests ~verbose:!verbose ~rand l in
-      if ok then ()
-      else exit 1
-    with Arg.Help msg ->
-      print_endline msg
+  let print_fail arb name l =
+    print_test_fail name (List.map (print_c_ex arb) l)
+
+  let print_error arb name (i,e) =
+    print_test_error name (print_instance arb i) e
+
+  let check_result cell res = match res.R.state with
+    | R.Success -> ()
+    | R.Error (i,e) -> raise (Test_error (name_ cell, print_instance cell.arb i, e))
+    | R.Failed l ->
+        let l = List.map (print_c_ex cell.arb) l in
+        raise (Test_fail (name_ cell, l))
+
+  let check_cell_exn ?call ~rand cell =
+    check_cell ?call ~rand cell |> check_result cell
+
+  let check_exn ~rand (Test cell) = check_cell_exn ~rand cell
 end
