@@ -1,13 +1,12 @@
 let passing =
-  QCheck.mk_test ~n:1000
+  QCheck.Test.make ~count:1000
     ~name:"list_rev_is_involutive"
-    QCheck.Arbitrary.(list small_int)
+    QCheck.(list small_int)
     (fun l -> List.rev (List.rev l) = l);;
 
 let failing =
-  QCheck.(mk_test ~n:10
-            ~pp:PP.(list int) ~name:"failing_test"
-            QCheck.Arbitrary.(list small_int)
+  QCheck.(Test.make ~count:10 ~name:"failing_test"
+            (list small_int)
             (fun l -> l = List.sort compare l));;
 
 let () =
