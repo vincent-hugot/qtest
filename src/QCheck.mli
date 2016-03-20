@@ -534,7 +534,7 @@ module Test : sig
 
   val check_cell :
     ?call:'a callback ->
-    rand:Random.State.t -> 'a cell -> 'a TestResult.t
+    ?rand:Random.State.t -> 'a cell -> 'a TestResult.t
   (** [check ~rand test] generates up to [count] random
       values of type ['a] using [arbitrary] and the random state [st]. The
       predicate [law] is called on them and if it returns [false] or raises an
@@ -546,12 +546,12 @@ module Test : sig
 
   val check_cell_exn :
     ?call:'a callback ->
-    rand:Random.State.t -> 'a cell -> unit
+    ?rand:Random.State.t -> 'a cell -> unit
   (** Same as {!check_cell} but calls  {!check_result} on the result.
       @raise Test_error if [res = Error _]
       @raise Test_error if [res = Failed _] *)
 
-  val check_exn : rand:Random.State.t -> t -> unit
+  val check_exn : ?rand:Random.State.t -> t -> unit
   (** Same as {!check_cell} but calls  {!check_result} on the result.
       @raise Test_error if [res = Error _]
       @raise Test_error if [res = Failed _] *)

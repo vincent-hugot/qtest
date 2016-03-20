@@ -767,7 +767,7 @@ module Test = struct
     | Some n -> n
 
   (* main checking function *)
-  let check_cell ?(call=callback_nil_) ~rand cell =
+  let check_cell ?(call=callback_nil_) ?(rand=Random.State.make [| 0 |]) cell =
     let state = {
       test=cell;
       rand;
@@ -830,8 +830,8 @@ module Test = struct
         let l = List.map (print_c_ex cell.arb) l in
         raise (Test_fail (name_ cell, l))
 
-  let check_cell_exn ?call ~rand cell =
-    check_cell ?call ~rand cell |> check_result cell
+  let check_cell_exn ?call ?rand cell =
+    check_cell ?call ?rand cell |> check_result cell
 
-  let check_exn ~rand (Test cell) = check_cell_exn ~rand cell
+  let check_exn ?rand (Test cell) = check_cell_exn ?rand cell
 end
