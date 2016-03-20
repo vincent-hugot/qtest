@@ -219,6 +219,11 @@ module Gen = struct
   let fix f =
     let rec f' n st = f f' n st in
     f'
+
+  let generate ?(rand=Random.State.make_self_init()) ~n g =
+    list_repeat n g rand
+
+  let generate1 ?(rand=Random.State.make_self_init()) g = g rand
 end
 
 module Print = struct

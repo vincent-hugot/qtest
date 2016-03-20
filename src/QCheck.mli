@@ -174,6 +174,12 @@ module Gen : sig
   ]}
 
   *)
+
+  val generate : ?rand:Random.State.t -> n:int -> 'a t -> 'a list
+  (** [generate ~n g] generates [n] instances of [g] *)
+
+  val generate1 : ?rand:Random.State.t -> 'a t -> 'a
+  (** [generate1 g] generates one instance of [g] *)
 end
 
 (** {2 Pretty printing} *)
