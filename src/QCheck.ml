@@ -648,10 +648,9 @@ module Test = struct
   let default_max_gen = 300
 
   let make_cell ?(count=default_count) ?(max_gen=default_max_gen)
-  ?max_fail ?small ?name arb law
+  ?(max_fail=1) ?small ?name arb law
   =
     let arb = match small with None -> arb | Some f -> set_small f arb in
-    let max_fail = match max_fail with None -> count | Some x -> x in
     {
       law;
       arb;
