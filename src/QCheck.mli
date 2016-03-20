@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (** {1 Quickcheck inspired property-based testing} *)
 
-(* FIXME update doc *)
 (** The library takes inspiration from Haskell's QuickCheck library. The
 rough idea is that the programer describes invariants that values of
 a certain type need to satisfy ("properties"), as functions from this type
@@ -27,51 +26,63 @@ so that the property is tried and checked on a number of random instances.
 
 This explains the organization of this module:
 
-- {! Arbitrary} is used to describe how to generate random values. An
-  ['a Arbitrary.t] is a random generator of values of type 'a.
-- {! Prop} is used to describe and combine properties. Especially interesting
-  is [Prop.(==>)], that is such that [a ==> b] only checks the property [b]
-  on a value [x] if [a x] holds (precondition).
-- {! PP} describes a few combinators to print values. This is used when a
-  property fails on some instances, to print the failing instances.
+- {! 'a arbitrary} is used to describe how to generate random values,
+  shrink them (make counter-examples as small as possible), print
+  them, etc. Auxiliary modules such as {!Gen}, {!Print}, and {!Shrink}
+  can be used along with {!make} to build one's own arbitrary instances.
 
-Then, a few functions are provided to test properties. Optional parameters
-allow to specify the random generator, the printer for failing cases, the
-number of instances to generate and test...
+- {!Test} is used to describe a single test, that is, a property of
+  type ['a -> bool] combined with an ['a arbitrary] that is used to generate
+  the test cases for this property. Optional parameters
+  allow to specify the random generator state, number of instances to generate
+  and test, etc.
 
 
 Examples:
 
-    - List.rev is involutive:
+  - List.rev is involutive:
 
 {[
-let test = QCheck.mk_test ~n:1000 QCheck.Arbitrary.(list alpha)
-  (fun l -> List.rev (List.rev l) = l);;
-QCheck.run test;;
+
+let test =
+  QCheck.(Test.make ~count:1000
+   (list int) (fun l -> List.rev (List.rev l) = l));;
+
+QCheck.Test.run_exn test;;
 ]}
-    - Not all lists are sorted (false property that will fail. The 15 smallest
-      counter-example lists will be printed):
+
+  - Not all lists are sorted (false property that will fail. The 15 smallest
+    counter-example lists will be printed):
 
 {[
 let test = QCheck.(
-  mk_test
-    ~n:10_000 ~size:List.length ~limit:15 ~pp:QCheck.PP.(list int)
-    QCheck.Arbitrary.(list small_int)
+  Test.make
+    ~count:10_000 ~max_fail:3
+    (list small_int)
     (fun l -> l = List.sort compare l));;
-QCheck.run test;;
+QCheck.Test.check_exn test;;
 ]}
 
 
-    - generate 20 random trees using {! Arbitrary.fix} :
+  - generate 20 random trees using {! Arbitrary.fix} :
 
-{[type tree = Int of int | Node of tree list;;
+{[
+type tree = Leaf of int | Node of tree * tree
 
- let ar = QCheck.Arbitrary.(fix ~max:10
-  ~base:(map small_int (fun i -> Int i))
-  (fun t st -> Node (list t st)));;
+let leaf x = Leaf x
+let node x y = Node (x,y)
 
- Arbitrary.generate ~n:20 ar;;
- ]}
+let g = QCheck.Gen.(sized @@ fix
+  (fun self n -> match n with
+    | 0 -> map leaf nat
+    | n ->
+      frequency
+        [1, map leaf nat;
+         2, map2 node (self (n/2)) (self (n/2))]
+    ))
+
+Gen.generate ~n:20 g;;
+]}
 
 More complex and powerful combinators can be found in Gabriel Scherer's
 {!Generator} module. Its documentation can be found
@@ -80,7 +91,9 @@ More complex and powerful combinators can be found in Gabriel Scherer's
 
 val (==>) : bool -> bool -> bool
 (** [b1 ==> b2] is the logical implication [b1 => b2]
-    ie [not b1 || b2] (except that it is strict).
+    ie [not b1 || b2] (except that it is strict and will interact
+    better with {!Test.check_exn} and the likes, because they will know
+    the precondition was not satisfied.).
 *)
 
 (** {2 Generate Random Values} *)
@@ -205,7 +218,9 @@ end
 
 (** {2 Iterators}
 
-    Compatible with the library "sequence" *)
+    Compatible with the library "sequence". An iterator [i] is simply
+    a function that accepts another function [f] (of type ['a -> unit])
+    and calls [f] on a sequence of elements [f x1; f x2; ...; f xn]. *)
 module Iter : sig
   type 'a t = ('a -> unit) -> unit
 

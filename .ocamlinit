@@ -1,3 +1,5 @@
+#use "topfind";;
+#require "oUnit";;
 #directory "_build/src";;
 #load "qcheck.cma";;
 open QCheck;;

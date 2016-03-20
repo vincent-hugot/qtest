@@ -23,6 +23,10 @@ When major, compatibility-breaking changes are done, fully realising the project
 
 * It has extensive documentation: see section "<<introduction>>" to get started.
 
+* It ships with a stand-alone library for random testing, that can be
+  used in combination with OUnit, or with its own test runner.
+  See section <<qcheck-the-library, QCheck>> for more precisions.
+
 * It has good syntax highlighting for Kate (KatePart: KWrite, KDevelop, Konqueror,...)
 and basic support for Emacs. See the https://github.com/vincent-hugot/iTeML/tree/master/editor_support[editor_support] directory
 
@@ -88,6 +92,19 @@ depend on it and can be compiled and used independently.
 
 Browse its code in the
 https://github.com/ocaml-batteries-team/batteries-included/tree/master/qtest[Github Repository].
+
+[[qcheck-the-library]]
+== QCheck: the random-testing library
+
+QTest now contains a library called `qcheck`,  inspired from Haskell's
+quickcheck. It replaces the previous `QTest2Lib` and provides a richer
+interface for building random generators, writing tests and running them.
+
+The *API documentation* can be found http://cedeela.fr/~simon/software/qcheck[here].
+
+NOTE: There is http://cedeela.fr/quickcheck-for-ocaml.html[a blog post]
+that explains some design choices of an *old* version of qcheck. Please refer
+to the API documentation for up-to-date documentation.
 
 [[using-a-quick-simple-example]]
 == Using qtest: a Quick, Simple Example
@@ -942,7 +959,7 @@ by `--help` if needed.
 ----
 $ qtest extract foo.ml -o footest.ml
 
-$ ocamlfind ocamlopt -package QTest2Lib -linkpkg footest.ml -o footest
+$ ocamlfind ocamlopt -package qcheck -linkpkg footest.ml -o footest
 
 $ ./footest --help
 

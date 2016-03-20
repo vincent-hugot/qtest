@@ -42,15 +42,8 @@ configure:
 
 VERSION=$(shell grep Version: _oasis | awk '{ print $$2 }')
 
-release:
-	./mk-release.sh ${VERSION} || true
-	scp qcheck-${VERSION}.tar.gz cedeela.fr:~/simon/root/software/releases/
-
 push_doc: doc
 	scp -r qcheck.docdir/* cedeela.fr:~/simon/root/software/qcheck
-
-tags:
-	otags qCheck.ml qCheck.mli
 
 man:
 	mkdir -p man/man3/
@@ -76,4 +69,4 @@ update_next_tag:
 	sed -i "s/NEXT_VERSION/$(VERSION)/g" *.ml *.mli
 	sed -i "s/NEXT_RELEASE/$(VERSION)/g" *.ml *.mli
 
-.PHONY: man install_file tags release update_next_tag
+.PHONY: man install_file tags update_next_tag
