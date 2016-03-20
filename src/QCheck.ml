@@ -807,7 +807,7 @@ module Test = struct
       | [x] -> Format.fprintf out "%s@," x
       | x :: y -> Format.fprintf out "%s@,%a" x pp_list y
     in
-    Format.fprintf out "@[<hv2>test `%s` failed on ≥ %d cases:@ @[<v>%a@]@]"
+    Format.fprintf out "@[<hv2>test `%s`@ failed on ≥ %d cases:@ @[<v>%a@]@]"
       name (List.length l) pp_list l
 
   let asprintf fmt =
@@ -818,8 +818,14 @@ module Test = struct
   let print_test_fail name l = asprintf "@[<2>%a@]" (pp_print_test_fail name) l
 
   let print_test_error name i e =
-    Format.sprintf "test `%s` raised exception `%s` on %s"
+    Format.sprintf "@[<2>test `%s`@ raised exception `%s`@ on %s@]"
       name (Printexc.to_string e) i
+
+  let () = Printexc.register_printer
+    (function
+      | Test_fail (name,l) -> Some (print_test_fail name l)
+      | Test_error (name,i,e) -> Some (print_test_error name i e)
+      | _ -> None)
 
   let print_fail arb name l =
     print_test_fail name (List.map (print_c_ex arb) l)
