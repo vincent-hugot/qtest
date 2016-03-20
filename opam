@@ -11,10 +11,10 @@ doc:
 dev-repo: "git@github.com:vincent-hugot/iTeML.git"
 build: [
   [ "./configure" "--bindir" "%{bin}%" ]
-  [ "make" "build" ]
+  [ make "build" ]
 ]
 install: [
-  "make" "install"
+  [ make "install" ]
 ]
 remove: [
   ["ocamlfind" "remove" "qcheck"]
@@ -31,4 +31,5 @@ tags: [
   "property"
   "quickcheck"
 ]
+conflicts: ["qcheck"]
 available: [ocaml-version >= "4.00.0"]
