@@ -61,7 +61,7 @@ let outf_target s = fpf !outc_target s
 
 (** indispensable preamble *)
 let hard_coded_preamble = "open OUnit;;\n\
-module Q = Quickcheck;;let ( ==> ) = Q.( ==> );;\n\
+module Q = QCheck;;let ( ==> ) = Q.( ==> );;\n\
 \n\n"
 
 (** global preamble, user-definable *)
@@ -234,13 +234,17 @@ let process uid = function
         "\"%s\" >:: (%s fun () -> OUnit.assert_equal ~msg:%s %s %s%s);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Random -> outf
-        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s (Runner.random_state()));\n"
+        "\"%s\" >:: (%s fun () -> \
+          let test = Q.Test.make ~name:%s %s %s%s in \n\
+          Q.Test.check_exn ~rand:(QCheck_runner.random_state()) test);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Raw -> outf
         "\"%s\" >:: (%s fun () -> (%s%s));\n"
         location bind lnumdir st.code;
       | Random_raw -> outf
-        "\"%s\" >:: (%s fun () -> Q.laws_exn %s %s %s%s (Runner.random_state()));\n"
+        "\"%s\" >:: (%s fun () -> \
+          let test = Q.Test.make ~name:%s %s %s%s in \n\
+          Q.Test.check_exn ~rand:(QCheck_runner.random_state()) test);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
     in List.iter do_statement test.statements;
     outf "];; let _ = ___add %s;;\n" test_handle

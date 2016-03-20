@@ -101,7 +101,7 @@ type cli_args = {
 
 let parse_cli argv =
   let print_list = ref false in
-  let set_verbose () = Quickcheck.verbose := true in
+  let set_verbose () = set_verbose true in
   let set_list () = print_list := true in
   let options = Arg.align
     [ "-v", Arg.Unit set_verbose, " "
