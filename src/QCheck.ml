@@ -815,7 +815,7 @@ module Test = struct
     let out = Format.formatter_of_buffer buf in
     Format.kfprintf (fun _ -> Buffer.contents buf) out fmt
 
-  let print_test_fail name l = asprintf "@[<2>%a@]" (pp_print_test_fail name) l
+  let print_test_fail name l = asprintf "@[<2>%a@]@?" (pp_print_test_fail name) l
 
   let print_test_error name i e =
     Format.sprintf "@[<2>test `%s`@ raised exception `%s`@ on %s@]"
