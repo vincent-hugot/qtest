@@ -465,7 +465,8 @@ val map : ?rev:('b -> 'a) -> ('a -> 'b) -> 'a arbitrary -> 'b arbitrary
 (** [map f a] returns a new arbitrary instance that generates values using
     [a#gen] and then transforms them through [f].
     @param rev if provided, maps values back to type ['a] so that the printer,
-      shrinker, etc. of [a] can be used
+      shrinker, etc. of [a] can be used. We assume [f] is monotonic in
+      this case (that is, smaller inputs are transformed into smaller outputs).
 *)
 
 val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
