@@ -163,6 +163,7 @@ module Gen : sig
 
   val string_size : ?gen:char t -> int t -> string t
   val string : ?gen:char t -> string t
+  val small_string : ?gen:char t -> string t
 
   val sized : 'a sized -> 'a t
 
@@ -376,6 +377,9 @@ val string : string arbitrary
 (** generates strings with a distribution of length of [small_int]
     and distribution of characters of [char] *)
 
+val small_string : string arbitrary
+(** Same as {!string} but with a small length (that is, [0--10]) *)
+
 val string_of_size : int Gen.t -> string arbitrary
 (** generates strings with distribution of characters if [char] *)
 
@@ -385,6 +389,8 @@ val printable_string : string arbitrary
 
 val printable_string_of_size : int Gen.t -> string arbitrary
 (** generates strings with distribution of characters of [printable_char] *)
+
+val small_printable_string : string arbitrary
 
 val numeral_string : string arbitrary
 (** generates strings with a distribution of length of [small_int]

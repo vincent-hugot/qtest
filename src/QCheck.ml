@@ -199,7 +199,8 @@ module Gen = struct
       Bytes.set s i (gen st)
     done;
     Bytes.unsafe_to_string s
-  let string ?gen st = string_size ?gen nat st
+  let string ?gen st = string_size ?gen small_int st
+  let small_string ?gen st = string_size ?gen (0--10) st
 
   (* corner cases *)
 
@@ -434,9 +435,11 @@ let string_gen gen =
 
 let string = string_gen Gen.char
 let string_of_size size = string_gen_of_size size Gen.char
+let small_string = string_gen_of_size Gen.(0--10) Gen.char
 
 let printable_string = string_gen Gen.printable
 let printable_string_of_size size = string_gen_of_size size Gen.printable
+let small_printable_string = string_gen_of_size Gen.(0--10) Gen.printable
 
 let numeral_string = string_gen Gen.numeral
 let numeral_string_of_size size = string_gen_of_size size Gen.numeral
