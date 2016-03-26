@@ -110,6 +110,7 @@ module Gen : sig
   val map : ('a -> 'b) -> 'a t -> 'b t
   val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
   val map3 : ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
+  val map_keep_input : ('a -> 'b) -> 'a t -> ('a * 'b) t
   val (>|=) : 'a t -> ('a -> 'b) -> 'b t
 
   val oneof : 'a t list -> 'a t
@@ -215,6 +216,8 @@ module Print : sig
 
   val list : 'a t -> 'a list t
   val array : 'a t -> 'a array t
+
+  val comap : ('a -> 'b) -> 'b t -> 'a t
 end
 
 (** {2 Iterators}
@@ -472,6 +475,17 @@ val map : ?rev:('b -> 'a) -> ('a -> 'b) -> 'a arbitrary -> 'b arbitrary
 val map_same_type : ('a -> 'a) -> 'a arbitrary -> 'a arbitrary
 (** Specialization of [map] when the transformation preserves the type, which
    makes shrinker, printer, etc. still relevant *)
+
+val map_keep_input :
+  ?print:'b Print.t -> ?small:('b -> int) ->
+  ('a -> 'b) -> 'a arbitrary -> ('a * 'b) arbitrary
+(** [map_keep_input f a] generates random values from [a], and maps them into
+    values of type ['b] using the function [f], but it also keeps  the
+    original value.
+    For shrinking, it is assumed that [f] is monotonic and that smaller input
+      values will map into smaller values
+    @param print optional printer for the [f]'s output
+*)
 
 (** {2 Tests} *)
 

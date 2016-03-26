@@ -71,6 +71,7 @@ module Gen = struct
   let map f x st = f (x st)
   let map2 f x y st = f (x st) (y st)
   let map3 f x y z st = f (x st) (y st) (z st)
+  let map_keep_input f gen st = let x = gen st in x, f x
   let (>|=) x f = map f x
 
   let oneof l st = List.nth l (Random.State.int st (List.length l)) st
@@ -264,6 +265,8 @@ module Print = struct
       a;
     Buffer.add_string b "|]";
     Buffer.contents b
+
+  let comap f p x = p (f x)
 end
 
 module Iter = struct
@@ -585,6 +588,19 @@ let map ?rev f a =
 
 let map_same_type f a =
   adapt_ a (fun st -> f (a.gen st))
+
+let map_keep_input ?print ?small f a =
+  make
+    ?print:(match print, a.print with
+        | Some f1, Some f2 -> Some (Print.pair f2 f1)
+        | Some f, None -> Some (Print.comap snd f)
+        | None, Some f -> Some (Print.comap fst f)
+        | None, None -> None)
+    ?small:(match small, a.small with
+        | Some f, _ -> Some (fun (_,y) -> f y)
+        | None, Some f -> Some (fun (x,_) -> f x)
+        | None, None -> None)
+    Gen.(map_keep_input f a.gen)
 
 module TestResult = struct
   type 'a counter_ex = {
