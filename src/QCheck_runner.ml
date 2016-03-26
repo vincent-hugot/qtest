@@ -97,32 +97,39 @@ type cli_args = {
   cli_verbose : bool;
   cli_print_list : bool;
   cli_rand : Random.State.t;
+  cli_slow_test : int; (* how many slow tests to display? *)
 }
 
-let parse_cli ~with_list argv =
+let parse_cli ~full_options argv =
   let print_list = ref false in
   let set_verbose () = set_verbose true in
   let set_list () = print_list := true in
-  let options = Arg.align
+  let slow = ref 0 in
+  let options = Arg.align (
     [ "-v", Arg.Unit set_verbose, " "
     ; "--verbose", Arg.Unit set_verbose, " enable verbose tests"
     ] @
-    (if with_list then
+    (if full_options then
       [ "-l", Arg.Unit set_list, " "
       ; "--list", Arg.Unit set_list, " print list of tests (2 lines each)"
+      ; "--slow", Arg.Set_int slow, " print the <n> slowest tests"
       ] else []
     ) @
     [ "-s", Arg.Set_int seed, " "
     ; "--seed", Arg.Set_int seed, " set random seed (to repeat tests)"
-    ] in
+    ]
+  ) in
   Arg.parse_argv argv options (fun _ ->()) "run qtest suite";
   let cli_rand = setup_random_state_ () in
-  { cli_verbose=verbose(); cli_rand; cli_print_list= !print_list; }
+  { cli_verbose=verbose(); cli_rand;
+    cli_print_list= !print_list; cli_slow_test= !slow; }
 
 let run ?(argv=Sys.argv) test =
-  let cli_args = parse_cli ~with_list:true argv in
+  let cli_args = parse_cli ~full_options:true argv in
   let _counter = ref (0,0,0) in (* Success, Failure, Other *)
   let total_tests = test_case_count test in
+  (* list of (test, execution time) *)
+  let exec_times = ref [] in
   let update = function
     | RSuccess _ -> let (s,f,o) = !_counter in _counter := (succ s,f,o)
     | RFailure _ -> let (s,f,o) = !_counter in _counter := (s,succ f,o)
@@ -153,8 +160,14 @@ let run ?(argv=Sys.argv) test =
     pf "%s%s%!" line cover;
   in
   let hdl_event = function
-    | EStart p -> start := Unix.gettimeofday(); display_test p
-    | EEnd p  -> stop := Unix.gettimeofday(); display_test p ~ended:true
+    | EStart p ->
+      start := Unix.gettimeofday();
+      display_test p
+    | EEnd p  ->
+      stop := Unix.gettimeofday();
+      display_test p ~ended:true;
+      let exec_time = !stop -. !start in
+      exec_times := (p, exec_time) :: !exec_times
     | EResult result -> update result
   in
   ps "Running tests...";
@@ -167,6 +180,17 @@ let run ?(argv=Sys.argv) test =
   assert (List.length results = total_tests);
   pf "Ran: %d tests in: %.2f seconds.%s\n"
     total_tests running_time (String.make 40 ' ');
+  (* XXX: suboptimal, but should work fine *)
+  if cli_args.cli_slow_test > 0 then (
+    pf "Display the %d slowest tests:\n" cli_args.cli_slow_test;
+    let l = !exec_times in
+    let l = List.sort (fun (_,t1)(_,t2) -> compare t2 t1) l in
+    List.iteri
+      (fun i (p,t) ->
+         if i<cli_args.cli_slow_test
+         then pf "  %s in %.2fs\n" (OUnit.string_of_path p) t)
+      l
+  );
   if failures = [] then pl "SUCCESS";
   if o <> 0 then pl "WARNING! SOME TESTS ARE NEITHER SUCCESSES NOR FAILURES!";
   (* create a meaningful return code for the process running the tests *)
@@ -280,7 +304,7 @@ let run_tests ?(verbose=verbose()) ?(out=stdout) ?(rand=random_state()) l =
 
 let run_tests_main ?(argv=Sys.argv) l =
   try
-    let cli_args = parse_cli ~with_list:false argv in
+    let cli_args = parse_cli ~full_options:false argv in
     exit
       (run_tests l ~verbose:cli_args.cli_verbose
          ~out:stdout ~rand:cli_args.cli_rand)
