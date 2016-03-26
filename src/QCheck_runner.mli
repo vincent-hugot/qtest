@@ -51,19 +51,29 @@ val (>:::) : string -> QCheck.Test.t list -> OUnit.test
 val run : ?argv:string array -> OUnit.test -> int
 (** [run test] runs the test, and returns an error code  that is [0]
     if all tests passed, [1] otherwise.
-    This is the default runner used by the comment-to-test generator. *)
+    This is the default runner used by the comment-to-test generator.
+
+    @param argv the command line arguments to parse parameters from (default [Sys.argv])
+    @raise Arg.Bad in case [argv] contains unknown arguments
+    @raise Arg.Help in case [argv] contains "--help"
+
+    This test runner displays execution in a compact way, making it good
+    for suites that have lots of tests. *)
 
 val run_tap : OUnit.test -> OUnit.test_results
-(** TAP-compatible test runner, in case we want to use a test harness *)
+(** TAP-compatible test runner, in case we want to use a test harness.
+    It prints one line per test. *)
 
 (** {2 Run a Suite of Tests and Get Results} *)
 
 val run_tests : ?verbose:bool -> ?out:out_channel -> ?rand:Random.State.t ->
                 QCheck.Test.t list -> int
-(** Run a suite of tests, and print its results.
+(** Run a suite of tests, and print its results. This is an heritage from
+    the "qcheck" library.
     @return an error code, [0] if all tests passed, [1] otherwise.
     @param verbose if true, prints more information about test cases *)
 
 val run_tests_main : ?argv:string array -> QCheck.Test.t list -> 'a
 (** Can be used as the main function of a test file. Exits with a non-0 code
-    if the tests fail. *)
+    if the tests fail. It refers to {!run_tests} for actually running tests
+    after CLI options have been parsed. *)

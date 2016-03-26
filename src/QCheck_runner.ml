@@ -99,16 +99,20 @@ type cli_args = {
   cli_rand : Random.State.t;
 }
 
-let parse_cli argv =
+let parse_cli ~with_list argv =
   let print_list = ref false in
   let set_verbose () = set_verbose true in
   let set_list () = print_list := true in
   let options = Arg.align
     [ "-v", Arg.Unit set_verbose, " "
     ; "--verbose", Arg.Unit set_verbose, " enable verbose tests"
-    ; "-l", Arg.Unit set_list, " "
-    ; "--list", Arg.Unit set_list, " print list of tests (2 lines each)"
-    ; "-s", Arg.Set_int seed, " "
+    ] @
+    (if with_list then
+      [ "-l", Arg.Unit set_list, " "
+      ; "--list", Arg.Unit set_list, " print list of tests (2 lines each)"
+      ] else []
+    ) @
+    [ "-s", Arg.Set_int seed, " "
     ; "--seed", Arg.Set_int seed, " set random seed (to repeat tests)"
     ] in
   Arg.parse_argv argv options (fun _ ->()) "run qtest suite";
@@ -116,7 +120,7 @@ let parse_cli argv =
   { cli_verbose=verbose(); cli_rand; cli_print_list= !print_list; }
 
 let run ?(argv=Sys.argv) test =
-  let cli_args = parse_cli argv in
+  let cli_args = parse_cli ~with_list:true argv in
   let _counter = ref (0,0,0) in (* Success, Failure, Other *)
   let total_tests = test_case_count test in
   let update = function
@@ -254,19 +258,32 @@ let (>:::) name l =
 let run_tests ?(verbose=verbose()) ?(out=stdout) ?(rand=random_state()) l =
   let module T = QCheck.Test in
   let module R = QCheck.TestResult in
-  let ok = ref true in
+  let n_fail = ref 0 in
+  let n = ref 0 in
   List.iter
     (fun (T.Test cell) ->
+      incr n;
       let res =
         T.check_cell cell ~call:(callback ~out ~print_res:true ~verbose) ~rand
       in
       match res.R.state with
       | R.Success -> ()
-      | R.Failed _ | R.Error _ -> ok := false)
+      | R.Failed _ | R.Error _ -> incr n_fail)
     l;
-  if !ok then 0 else 1
+  if !n_fail = 0 then (
+    Printf.fprintf out "success (ran %d tests)\n%!" !n;
+    0
+  ) else (
+    Printf.fprintf out "failure (%d tests failed, ran %d tests)\n%!" !n_fail !n;
+    1
+  )
 
 let run_tests_main ?(argv=Sys.argv) l =
-  let cli_args = parse_cli argv in
-  exit
-    (run_tests ~verbose:cli_args.cli_verbose ~out:stdout ~rand:cli_args.cli_rand l)
+  try
+    let cli_args = parse_cli ~with_list:false argv in
+    exit
+      (run_tests l ~verbose:cli_args.cli_verbose
+         ~out:stdout ~rand:cli_args.cli_rand)
+  with
+    | Arg.Bad msg -> print_endline msg; exit 1
+    | Arg.Help msg -> print_endline msg; exit 0
