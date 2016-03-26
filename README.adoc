@@ -983,4 +983,41 @@ Currently the options are:
   random seed used by the random generators is displayed; later, providing
   the same seed with `--seed <s>` will repeat the same tests.
 
-  
+== A few trips
+
+A few useful tricks when writing inline tests:
+
+- if possible, favor `(*$= a b *)` over `(*$T (a = b) *)`, because the former
+  makes it possible to add a printer (with `& ~printer:some_printer`) in
+  case the two values are not equal
+- random tests are useful to check general properties, or compare a complex-but-efficient
+  implementation to a (possibly naive) reference implementation. For
+  instance, if we had implemented a fancy sort function `my_sort` on lists, we
+  could compare it to the stdlib's `List.sort`:
++
+[source,OCaml]
+----
+(*$Q
+  Q.(list int) (fun l -> \
+    my_sort compare l = List.sort compare l)
+*)
+----
+- to factor some code that is useful in tests, but should not appear in the
+  module (for instance, printers or generators for running complex tests),
+  you can use `(*$inject ... *)` somewhere in the `.ml` file:
++
+[source,OCaml]
+----
+type foo = { a : int; b : string }
+
+(*$inject
+  let pp_foo f = Printf.sprintf "foo{a=%d, b=%s}" f.a f.b
+*)
+
+(*$= & ~printer:pp_foo
+  {a=0; b="b1"} {a=42; b="b2"}
+*)
+----
++
+here, the test can use a custom printer defined above (and it needs it,
+for it will fail badly).
