@@ -19,6 +19,13 @@ Library qcheck
   Modules:      QCheck, QCheck_runner
   BuildDepends: oUnit, unix, bytes
 
+Executable "runner_example"
+  Path:         tests/
+  Install:      false
+  BuildTools:   ocamlbuild
+  BuildDepends: qcheck
+  MainIs:       Runner_test.ml
+
 Executable "runner_ounit_example"
   Path:         tests/
   Install:      false
