@@ -10,11 +10,10 @@ doc:
   "https://github.com/vincent-hugot/iTeML/blob/master/README.adoc#introduction"
 dev-repo: "git@github.com:vincent-hugot/iTeML.git"
 build: [
-  [ "./configure" "--bindir" "%{bin}%" ]
   [ make "build" ]
 ]
 install: [
-  [ make "install" ]
+  [ make "BIN=%{bin}%" "install" ]
 ]
 remove: [
   ["ocamlfind" "remove" "qcheck"]
@@ -22,7 +21,6 @@ remove: [
 ]
 depends: [
   "ocamlfind"
-  "oasis" {build & >= "0.2.0"}
   "ounit" { >= "2.0.0" }
   "ocamlbuild" {build}
 ]

@@ -1,5 +1,3 @@
-# OASIS_START
-# DO NOT EDIT (digest: bd0c89253428282fb72272b1daac0a45)
 version = "2.1.1"
 description = "qTest: inline unit tests extractor, from Batteries."
 requires = "oUnit unix bytes"
@@ -8,5 +6,4 @@ archive(byte, plugin) = "qcheck.cma"
 archive(native) = "qcheck.cmxa"
 archive(native, plugin) = "qcheck.cmxs"
 exists_if = "qcheck.cma"
-# OASIS_STOP
 
