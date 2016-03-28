@@ -17,7 +17,7 @@ Library qcheck
   Path:         src
   BuildTools:   ocamlbuild
   Modules:      QCheck, QCheck_runner
-  BuildDepends: oUnit, unix, bytes
+  BuildDepends: oUnit (>= 2.0.0), unix, bytes
 
 Executable "runner_example"
   Path:         tests/

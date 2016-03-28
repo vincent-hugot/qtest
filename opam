@@ -23,7 +23,7 @@ remove: [
 depends: [
   "ocamlfind"
   "oasis" {build & >= "0.2.0"}
-  "ounit"
+  "ounit" { >= "2.0.0" }
   "ocamlbuild" {build}
 ]
 tags: [

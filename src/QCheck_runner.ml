@@ -226,22 +226,28 @@ let next_name_ =
     incr i;
     name
 
+type ('b,'c) printer = {
+  info: 'a. ('a,'b,'c,unit) format4 -> 'a;
+  fail: 'a. ('a,'b,'c,unit) format4 -> 'a;
+  err: 'a. ('a,'b,'c,unit) format4 -> 'a;
+}
+
 (* main callback for individual tests
    @param verbose if true, print statistics and details
    @param print_res if true, print the result on [out] *)
-let callback ~verbose ~print_res ~out name cell result =
+let callback ~verbose ~print_res ~print name cell result =
   let module R = QCheck.TestResult in
   let module T = QCheck.Test in
   let arb = T.get_arbitrary cell in
   if verbose then (
-    Printf.fprintf out "\rlaw %s: %d relevant cases (%d total)\n"
+    print.info "\rlaw %s: %d relevant cases (%d total)\n"
       name result.R.count result.R.count_gen;
     match arb.QCheck.collect with
     | None -> ()
     | Some _ ->
         let (lazy tbl) = result.R.collect_tbl in
         Hashtbl.iter
-          (fun case num -> Printf.fprintf out "\r  %s: %d cases\n" case num)
+          (fun case num -> print.info "\r  %s: %d cases\n" case num)
           tbl
   );
   if print_res then (
@@ -249,26 +255,31 @@ let callback ~verbose ~print_res ~out name cell result =
     match result.R.state with
       | R.Success -> ()
       | R.Failed l ->
-          Printf.fprintf out "\r  %s\n" (T.print_fail arb name l)
+        print.fail "  %s\n" (T.print_fail arb name l);
       | R.Error (i,e) ->
-          Printf.fprintf out "\r  %s\n" (T.print_error arb name (i,e))
-  );
-  flush out
+        print.err "\r  %s\n" (T.print_error arb name (i,e));
+  )
+
+let name_of_cell cell =
+  let module T = QCheck.Test in
+  match T.get_name cell with
+  | None ->
+    let n = next_name_ () in
+    T.set_name cell n;
+    n
+  | Some m -> m
+
+let print_std = { info = Printf.printf; fail = Printf.printf; err = Printf.printf }
 
 (* to convert a test to a [OUnit.test], we register a callback that will
    possibly print errors and counter-examples *)
 let to_ounit_test_cell ?(verbose=verbose()) ?(rand=random_state()) cell =
   let module T = QCheck.Test in
-  let name = match T.get_name cell with
-    | None ->
-        let n = next_name_ () in
-        T.set_name cell n;
-        n
-    | Some m -> m
-  in
+  let name = name_of_cell cell in
   let run () =
     T.check_cell_exn cell
-      ~rand ~call:(callback ~verbose ~print_res:verbose ~out:stdout);
+      ~rand ~call:(callback ~verbose ~print_res:verbose ~print:print_std);
+    flush stdout;
     true
   in
   name >:: (fun _ -> assert_bool name (run ()))
@@ -279,6 +290,32 @@ let to_ounit_test ?verbose ?rand (QCheck.Test.Test c) =
 let (>:::) name l =
   name >::: (List.map (fun t -> to_ounit_test t) l)
 
+let conf_seed = OUnit2.Conf.make_int "seed" ~-1 "set random seed"
+
+let default_rand () =
+  (* random seed, for repeatability of tests *)
+  Random.State.make [| 89809344; 994326685; 290180182 |]
+
+let to_ounit2_test ?(rand = default_rand()) (QCheck.Test.Test cell) =
+  let module T = QCheck.Test in
+  let name = name_of_cell cell in
+  let open OUnit2 in
+  name >:: (fun ctxt ->
+      let rand = match conf_seed ctxt with
+        | -1 ->
+          Random.State.copy rand
+        | s ->
+          (* user provided random seed *)
+          Random.State.make [| s |]
+      in
+      let print = {
+        info = (fun fmt -> logf ctxt `Info fmt);
+        fail = (fun fmt -> Printf.ksprintf assert_failure fmt);
+        err = (fun fmt -> logf ctxt `Error fmt);
+      } in
+      T.check_cell_exn cell
+        ~rand ~call:(callback ~verbose:true ~print_res:true ~print))
+
 let run_tests ?(verbose=verbose()) ?(out=stdout) ?(rand=random_state()) l =
   let module T = QCheck.Test in
   let module R = QCheck.TestResult in
@@ -288,7 +325,7 @@ let run_tests ?(verbose=verbose()) ?(out=stdout) ?(rand=random_state()) l =
     (fun (T.Test cell) ->
       incr n;
       let res =
-        T.check_cell cell ~call:(callback ~out ~print_res:true ~verbose) ~rand
+        T.check_cell cell ~call:(callback ~print:print_std ~print_res:true ~verbose) ~rand
       in
       match res.R.state with
       | R.Success -> ()

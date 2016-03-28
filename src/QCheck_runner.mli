@@ -46,6 +46,12 @@ val to_ounit_test_cell : ?verbose:bool -> ?rand:Random.State.t -> _ QCheck.Test.
 val (>:::) : string -> QCheck.Test.t list -> OUnit.test
 (** Same as {!OUnit.>:::} but with a list of QCheck tests *)
 
+val to_ounit2_test : ?rand:Random.State.t -> QCheck.Test.t -> OUnit2.test
+(** [to_ounit2_test ?rand t] wraps [t] into a OUnit2 test
+    @param rand the random generator to use (default: a static seed for reproducibility),
+    can be overridden with "-seed" on the command-line
+*)
+
 (** {2 OUnit runners} *)
 
 val run : ?argv:string array -> OUnit.test -> int
