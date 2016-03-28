@@ -52,6 +52,9 @@ val to_ounit2_test : ?rand:Random.State.t -> QCheck.Test.t -> OUnit2.test
     can be overridden with "-seed" on the command-line
 *)
 
+val to_ounit2_test_list : ?rand:Random.State.t -> QCheck.Test.t list -> OUnit2.test list
+(** [to_ounit2_test_list ?rand t] like [to_ounit2_test] but for a list of tests *)
+
 (** {2 OUnit runners} *)
 
 val run : ?argv:string array -> OUnit.test -> int

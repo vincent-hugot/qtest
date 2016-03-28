@@ -316,6 +316,9 @@ let to_ounit2_test ?(rand = default_rand()) (QCheck.Test.Test cell) =
       T.check_cell_exn cell
         ~rand ~call:(callback ~verbose:true ~print_res:true ~print))
 
+let to_ounit2_test_list ?rand lst =
+  List.rev (List.rev_map (to_ounit2_test ?rand) lst)
+
 let run_tests ?(verbose=verbose()) ?(out=stdout) ?(rand=random_state()) l =
   let module T = QCheck.Test in
   let module R = QCheck.TestResult in

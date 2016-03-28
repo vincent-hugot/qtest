@@ -33,6 +33,13 @@ Executable "runner_ounit_example"
   BuildDepends: qcheck
   MainIs:       Runner_ounit_test.ml
 
+Executable "runner_ounit2_example"
+  Path:         tests/
+  Install:      false
+  BuildTools:   ocamlbuild
+  BuildDepends: qcheck
+  MainIs:       Runner_ounit2_test.ml
+
 Document qcheck
   Title:                QCheck docs
   Type:                 ocamlbuild (0.3)
