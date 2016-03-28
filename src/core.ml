@@ -234,18 +234,18 @@ let process uid = function
         "\"%s\" >:: (%s fun () -> OUnit.assert_equal ~msg:%s %s %s%s);\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Random -> outf
-        "\"%s\" >:: (%s fun () -> \
+        "(%s \n\
           let test = Q.Test.make ~name:%s %s %s%s in \n\
-          Q.Test.check_exn ~rand:(QCheck_runner.random_state()) test);\n"
-        location bind extended_name test.header.hpar lnumdir st.code;
+          QCheck_runner.to_ounit_test ~rand:(QCheck_runner.random_state()) test);\n"
+        bind extended_name test.header.hpar lnumdir st.code;
       | Raw -> outf
         "\"%s\" >:: (%s fun () -> (%s%s));\n"
         location bind lnumdir st.code;
       | Random_raw -> outf
-        "\"%s\" >:: (%s fun () -> \
+        "(%s \n\
           let test = Q.Test.make ~name:%s %s %s%s in \n\
-          Q.Test.check_exn ~rand:(QCheck_runner.random_state()) test);\n"
-        location bind extended_name test.header.hpar lnumdir st.code;
+          QCheck_runner.to_ounit_test ~rand:(QCheck_runner.random_state()) test);\n"
+        bind extended_name test.header.hpar lnumdir st.code;
     in List.iter do_statement test.statements;
     outf "];; let _ = ___add %s;;\n" test_handle
   | Test test -> epf "Skipping `%s'\n" (get_test_name test)
