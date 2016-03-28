@@ -22,7 +22,7 @@ let ps,pl = print_string,print_endline
 let va = Printf.sprintf
 let pf = Printf.printf
 
-let separator1 = String.make 79 '\\'
+let separator1 = "\027[K" ^ (String.make 79 '\\')
 let separator2 = String.make 79 '/'
 
 let string_of_path path =
@@ -63,7 +63,7 @@ let st = ref None
 
 let set_seed_ s =
   seed := s;
-  Printf.printf "random seed: %d\n%!" s;
+  Printf.printf "\rrandom seed: %d\n%!" s;
   let state = Random.State.make [| s |] in
   st := Some state;
   state
@@ -255,7 +255,7 @@ let callback ~verbose ~print_res ~print name cell result =
     match result.R.state with
       | R.Success -> ()
       | R.Failed l ->
-        print.fail "  %s\n" (T.print_fail arb name l);
+        print.fail "\r  %s\n" (T.print_fail arb name l);
       | R.Error (i,e) ->
         print.err "\r  %s\n" (T.print_error arb name (i,e));
   )
@@ -280,10 +280,8 @@ let to_ounit_test_cell ?(verbose=verbose()) ?(rand=random_state()) cell =
     try
       T.check_cell_exn cell
         ~rand ~call:(callback ~verbose ~print_res:verbose ~print:print_std);
-      flush stdout;
       true
     with T.Test_fail _ ->
-      flush stdout;
       false
   in
   name >:: (fun _ -> assert_bool name (run ()))
