@@ -277,10 +277,14 @@ let to_ounit_test_cell ?(verbose=verbose()) ?(rand=random_state()) cell =
   let module T = QCheck.Test in
   let name = name_of_cell cell in
   let run () =
-    T.check_cell_exn cell
-      ~rand ~call:(callback ~verbose ~print_res:verbose ~print:print_std);
-    flush stdout;
-    true
+    try
+      T.check_cell_exn cell
+        ~rand ~call:(callback ~verbose ~print_res:verbose ~print:print_std);
+      flush stdout;
+      true
+    with T.Test_fail _ ->
+      flush stdout;
+      false
   in
   name >:: (fun _ -> assert_bool name (run ()))
 
