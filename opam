@@ -25,6 +25,7 @@ depends: [
   "ocamlfind"
   "ounit" { >= "2.0.0" }
   "ocamlbuild" {build}
+  "base-bytes"
 ]
 tags: [
   "test"
