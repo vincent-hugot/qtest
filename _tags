@@ -6,4 +6,4 @@
 <src/qtest.ml*>: warn(-29)
 <src/*.ml*>: package(bytes)
 <src/QCheck*.*>: package(oUnit), package(unix)
-<tests/*>: package(oUnit)
+<tests/*>: package(oUnit), package(bytes)
