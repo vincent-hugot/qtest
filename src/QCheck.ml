@@ -860,7 +860,8 @@ module Test = struct
         raise (Test_fail (name_ cell, l))
 
   let check_cell_exn ?call ?rand cell =
-    check_cell ?call ?rand cell |> check_result cell
+    let res = check_cell ?call ?rand cell in
+    check_result cell res
 
   let check_exn ?rand (Test cell) = check_cell_exn ?rand cell
 end
