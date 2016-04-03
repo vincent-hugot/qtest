@@ -1,5 +1,5 @@
-= iTeML / qtest v2.1.0
-v2.1
+= iTeML / qtest v2.2.0
+v2.2
 :toc: macro
 :toclevels: 4
 :source-highlighter: pygments
@@ -19,7 +19,7 @@ feature-complete.
 When major, compatibility-breaking changes are done, fully realising the project, the new utility will be called *iTeML*.
 
 
-* qtest is available for installation as an http://opam.ocaml.org/packages/qtest/qtest.2.1.0/[OPAM package].
+* qtest is available for installation as an http://opam.ocaml.org/packages/qtest/qtest.2.2/[OPAM package].
 
 * It has extensive documentation: see section "<<introduction>>" to get started.
 
