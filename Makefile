@@ -17,6 +17,10 @@ uninstall:
 	ocamlfind remove qcheck
 	rm $(BIN)/qtest
 
+doc: build
+	ocamlbuild -I src/ -use-ocamlfind -package oUnit src/qcheck.docdir/index.html
+	# -docflags -intro,doc_intro.txt 
+
 push_doc: doc
 	scp -r qcheck.docdir/* cedeela.fr:~/simon/root/software/qcheck
 
