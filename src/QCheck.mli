@@ -166,7 +166,13 @@ module Gen : sig
   val string : ?gen:char t -> string t
   val small_string : ?gen:char t -> string t
 
+  val join : 'a t t -> 'a t
+  (** @since NEXT_RELEASE *)
+
   val sized : 'a sized -> 'a t
+
+  val sized_size : int t -> 'a sized -> 'a t
+  (** @since NEXT_RELEASE *)
 
   val fix : ('a sized -> 'a sized) -> 'a sized (** Fixpoint; size decreases *)
 

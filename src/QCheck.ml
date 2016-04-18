@@ -203,6 +203,8 @@ module Gen = struct
   let string ?gen st = string_size ?gen small_int st
   let small_string ?gen st = string_size ?gen (0--10) st
 
+  let join g st = (g st) st
+
   (* corner cases *)
 
   let graft_corners gen corners () =
@@ -214,9 +216,8 @@ module Gen = struct
 
   (* sized, fix *)
 
-  let sized f st =
-    let n = nat st in
-    f n st
+  let sized_size s f st = f (s st) st
+  let sized f = sized_size nat f
 
   let fix f =
     let rec f' n st = f f' n st in
