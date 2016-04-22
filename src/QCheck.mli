@@ -558,17 +558,19 @@ module Test : sig
   (** Exception raised when a test failed, with the list of counter-examples.
       [Test_fail (name, l)] means test [name] failed on elements of [l] *)
 
-  exception Test_error of string * string * exn
+  exception Test_error of string * string * exn * string
   (** Exception raised when a test raised an exception [e], with
       the sample that triggered the exception.
-      [Test_error (name, i, e)] means [name] failed on [i] with exception [e] *)
+      [Test_error (name, i, e, st)]
+      means [name] failed on [i] with exception [e], and [st] is the
+      stacktrace (if enabled) or an empty string *)
 
   val print_instance : 'a arbitrary -> 'a -> string
   val print_c_ex : 'a arbitrary -> 'a TestResult.counter_ex -> string
   val print_fail : 'a arbitrary -> string -> 'a TestResult.counter_ex list -> string
-  val print_error : 'a arbitrary -> string -> 'a * exn -> string
+  val print_error : ?st:string -> 'a arbitrary -> string -> 'a * exn -> string
   val print_test_fail : string -> string list -> string
-  val print_test_error : string -> string -> exn -> string
+  val print_test_error : string -> string -> exn -> string -> string
 
   val check_result : 'a cell -> 'a TestResult.t -> unit
   (** [check_result cell res] checks that [res] is [Ok _], and returns unit.

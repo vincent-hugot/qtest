@@ -811,7 +811,7 @@ module Test = struct
     res
 
   exception Test_fail of string * string list
-  exception Test_error of string * string * exn
+  exception Test_error of string * string * exn * string
 
   (* print instance using [arb] *)
   let print_instance arb i = match arb.print with
@@ -840,25 +840,27 @@ module Test = struct
 
   let print_test_fail name l = asprintf "@[<2>%a@]@?" (pp_print_test_fail name) l
 
-  let print_test_error name i e =
-    Format.sprintf "@[<2>test `%s`@ raised exception `%s`@ on %s@]"
-      name (Printexc.to_string e) i
+  let print_test_error name i e stack =
+    Format.sprintf "@[test `%s`@ raised exception `%s`@ on `%s`@,%s@]"
+      name (Printexc.to_string e) i stack
 
   let () = Printexc.register_printer
     (function
       | Test_fail (name,l) -> Some (print_test_fail name l)
-      | Test_error (name,i,e) -> Some (print_test_error name i e)
+      | Test_error (name,i,e,st) -> Some (print_test_error name i e st)
       | _ -> None)
 
   let print_fail arb name l =
     print_test_fail name (List.map (print_c_ex arb) l)
 
-  let print_error arb name (i,e) =
-    print_test_error name (print_instance arb i) e
+  let print_error ?(st="") arb name (i,e) =
+    print_test_error name (print_instance arb i) e st
 
   let check_result cell res = match res.R.state with
     | R.Success -> ()
-    | R.Error (i,e) -> raise (Test_error (name_ cell, print_instance cell.arb i, e))
+    | R.Error (i,e) ->
+      let st = Printexc.get_backtrace () in
+      raise (Test_error (name_ cell, print_instance cell.arb i, e, st))
     | R.Failed l ->
         let l = List.map (print_c_ex cell.arb) l in
         raise (Test_fail (name_ cell, l))
