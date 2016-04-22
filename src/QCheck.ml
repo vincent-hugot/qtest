@@ -752,7 +752,7 @@ module Test = struct
         that fail the precondition *)
   let rec check_state state =
     if is_done state then state.res
-    else
+    else (
       let input = new_input state in
       collect state input;
       try
@@ -763,8 +763,11 @@ module Test = struct
           check_state state
         ) else handle_fail state input
       with
-      | FailedPrecondition when state.cur_max_gen > 0 -> check_state state
+      | FailedPrecondition ->
+        state.cur_max_gen <- state.cur_max_gen - 1;
+        check_state state
       | e -> handle_exn state input e
+    )
   (* test failed on [input], which means the law is wrong. Continue if
      we should. *)
   and handle_fail state input =
