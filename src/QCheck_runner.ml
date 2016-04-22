@@ -284,7 +284,7 @@ let to_ounit_test_cell ?(verbose=verbose()) ?(rand=random_state()) cell =
     with T.Test_fail _ ->
       false
   in
-  name >:: (fun _ -> assert_bool name (run ()))
+  name >:: (fun () -> assert_bool name (run ()))
 
 let to_ounit_test ?verbose ?rand (QCheck.Test.Test c) =
   to_ounit_test_cell ?verbose ?rand c
@@ -293,6 +293,7 @@ let (>:::) name l =
   name >::: (List.map (fun t -> to_ounit_test t) l)
 
 let conf_seed = OUnit2.Conf.make_int "seed" ~-1 "set random seed"
+let conf_verbose = OUnit2.Conf.make_bool "qcheck_verbose" false "enable verbose QCheck tests"
 
 let default_rand () =
   (* random seed, for repeatability of tests *)
@@ -310,13 +311,14 @@ let to_ounit2_test ?(rand = default_rand()) (QCheck.Test.Test cell) =
           (* user provided random seed *)
           Random.State.make [| s |]
       in
+      let verbose = conf_verbose ctxt in
       let print = {
         info = (fun fmt -> logf ctxt `Info fmt);
         fail = (fun fmt -> Printf.ksprintf assert_failure fmt);
         err = (fun fmt -> logf ctxt `Error fmt);
       } in
       T.check_cell_exn cell
-        ~rand ~call:(callback ~verbose:true ~print_res:true ~print))
+        ~rand ~call:(callback ~verbose ~print_res:true ~print))
 
 let to_ounit2_test_list ?rand lst =
   List.rev (List.rev_map (to_ounit2_test ?rand) lst)
