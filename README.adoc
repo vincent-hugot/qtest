@@ -983,7 +983,7 @@ Currently the options are:
   random seed used by the random generators is displayed; later, providing
   the same seed with `--seed <s>` will repeat the same tests.
 
-== A few trips
+== A few tricks
 
 A few useful tricks when writing inline tests:
 
