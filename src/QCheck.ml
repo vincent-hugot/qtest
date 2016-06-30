@@ -614,7 +614,7 @@ module TestResult = struct
   type 'a state =
     | Success
     | Failed of 'a failed_state (** Failed instances *)
-    | Error of 'a * exn  (** Error, and instance that triggered it *)
+    | Error of 'a counter_ex * exn  (** Error, and instance that triggered it *)
 
   (* result returned by running a test *)
   type 'a t = {
@@ -648,8 +648,8 @@ module TestResult = struct
             res.state <-
               Failed (c_ex :: l)
 
-  let error res instance e =
-    res.state <- Error (instance, e)
+  let error ~steps res instance e =
+    res.state <- Error ({instance; shrink_steps=steps}, e)
 end
 
 module Test = struct
@@ -768,6 +768,7 @@ module Test = struct
         check_state state
       | e -> handle_exn state input e
     )
+
   (* test failed on [input], which means the law is wrong. Continue if
      we should. *)
   and handle_fail state input =
@@ -780,9 +781,13 @@ module Test = struct
     if _is_some state.test.arb.small && state.cur_max_fail > 0
       then check_state state
       else state.res
-  (* test raised [e] on [input]; stop immediately *)
+
+  (* test raised [e] on [input]; try to shrink then fail *)
   and handle_exn state input e =
-    R.error state.res input e;
+    (* first, shrink
+       TODO: shall we shrink differently (i.e. expected only an error)? *)
+    let input, steps = shrink state input in
+    R.error state.res ~steps input e;
     state.res
 
   type 'a callback = string -> 'a cell -> 'a TestResult.t -> unit
@@ -854,13 +859,13 @@ module Test = struct
     print_test_fail name (List.map (print_c_ex arb) l)
 
   let print_error ?(st="") arb name (i,e) =
-    print_test_error name (print_instance arb i) e st
+    print_test_error name (print_c_ex arb i) e st
 
   let check_result cell res = match res.R.state with
     | R.Success -> ()
     | R.Error (i,e) ->
       let st = Printexc.get_backtrace () in
-      raise (Test_error (name_ cell, print_instance cell.arb i, e, st))
+      raise (Test_error (name_ cell, print_c_ex cell.arb i, e, st))
     | R.Failed l ->
         let l = List.map (print_c_ex cell.arb) l in
         raise (Test_fail (name_ cell, l))

@@ -506,7 +506,7 @@ module TestResult : sig
   type 'a state =
     | Success
     | Failed of 'a failed_state (** Failed instances *)
-    | Error of 'a * exn  (** Error, and instance that triggered it *)
+    | Error of 'a counter_ex * exn  (** Error, and instance that triggered it *)
 
   (* result returned by running a test *)
   type 'a t = {
@@ -568,7 +568,7 @@ module Test : sig
   val print_instance : 'a arbitrary -> 'a -> string
   val print_c_ex : 'a arbitrary -> 'a TestResult.counter_ex -> string
   val print_fail : 'a arbitrary -> string -> 'a TestResult.counter_ex list -> string
-  val print_error : ?st:string -> 'a arbitrary -> string -> 'a * exn -> string
+  val print_error : ?st:string -> 'a arbitrary -> string -> 'a TestResult.counter_ex * exn -> string
   val print_test_fail : string -> string list -> string
   val print_test_error : string -> string -> exn -> string -> string
 
