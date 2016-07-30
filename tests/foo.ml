@@ -237,3 +237,7 @@ let strange_string = " \"
 (*$Q & ~count:10
   (Q.small_int_corners ()) (fun n-> n+3 -2 -1 = abs n)
 *)
+
+(*$Q & ~max_gen:1000000 ~count:1000000
+    (Q.make (fun _ -> ())) (fun () -> true)
+*)

@@ -743,6 +743,31 @@ module Test = struct
     in
     shrink_ ~steps:0 st i
 
+  type 'a check_result =
+    | CR_continue
+    | CR_yield of 'a TestResult.t
+
+  (* test raised [e] on [input]; try to shrink then fail *)
+  let handle_exn state input e : _ check_result =
+    (* first, shrink
+       TODO: shall we shrink differently (i.e. expected only an error)? *)
+    let input, steps = shrink state input in
+    R.error state.res ~steps input e;
+    CR_yield state.res
+
+  (* test failed on [input], which means the law is wrong. Continue if
+     we should. *)
+  let handle_fail state input : _ check_result =
+    (* first, shrink *)
+    let input, steps = shrink state input in
+    (* fail *)
+    decr_count state;
+    state.cur_max_fail <- state.cur_max_fail - 1;
+    R.fail state.res ~steps input;
+    if _is_some state.test.arb.small && state.cur_max_fail > 0
+    then CR_continue
+    else CR_yield state.res
+
   (* [check_state iter gen func] applies [func] repeatedly ([iter] times)
       on output of [gen], and if [func] ever returns false, then the input that
       caused the failure is returned in [Failed].
@@ -755,40 +780,24 @@ module Test = struct
     else (
       let input = new_input state in
       collect state input;
-      try
-        if state.test.law input
-        then (
-          (* one test ok *)
-          decr_count state;
-          check_state state
-        ) else handle_fail state input
-      with
-      | FailedPrecondition ->
-        state.cur_max_gen <- state.cur_max_gen - 1;
-        check_state state
-      | e -> handle_exn state input e
+      let res =
+        try
+          if state.test.law input
+          then (
+            (* one test ok *)
+            decr_count state;
+            CR_continue
+          ) else handle_fail state input
+        with
+          | FailedPrecondition ->
+            state.cur_max_gen <- state.cur_max_gen - 1;
+            CR_continue
+          | e -> handle_exn state input e
+      in
+      match res with
+        | CR_continue -> check_state state
+        | CR_yield x -> x
     )
-
-  (* test failed on [input], which means the law is wrong. Continue if
-     we should. *)
-  and handle_fail state input =
-    (* first, shrink *)
-    let input, steps = shrink state input in
-    (* fail *)
-    decr_count state;
-    state.cur_max_fail <- state.cur_max_fail - 1;
-    R.fail state.res ~steps input;
-    if _is_some state.test.arb.small && state.cur_max_fail > 0
-      then check_state state
-      else state.res
-
-  (* test raised [e] on [input]; try to shrink then fail *)
-  and handle_exn state input e =
-    (* first, shrink
-       TODO: shall we shrink differently (i.e. expected only an error)? *)
-    let input, steps = shrink state input in
-    R.error state.res ~steps input e;
-    state.res
 
   type 'a callback = string -> 'a cell -> 'a TestResult.t -> unit
 
