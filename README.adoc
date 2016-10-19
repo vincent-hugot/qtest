@@ -1021,3 +1021,20 @@ type foo = { a : int; b : string }
 +
 here, the test can use a custom printer defined above (and it needs it,
 for it will fail badly).
+
+=== Using qtest with OCamlbuild
+
+The following snippet, added to `myocamlbuild.ml`, will use `qtest`
+to extract `foo_tests.ml` from `foo.ml` for any modulo `foo`.
+
+[source,OCaml]
+----
+open Ocamlbuild_plugin;;
+
+rule "qtest extract"
+  ~prod:"%_tests.ml"
+  ~deps:["%.ml"]
+  (fun env build ->
+   Cmd(S[A"qtest"; A"extract"; A"-o"; P(env "%_tests.ml");
+         P(env "%.ml")]))
+----
