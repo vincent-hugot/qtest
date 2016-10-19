@@ -1025,7 +1025,7 @@ for it will fail badly).
 === Using qtest with OCamlbuild
 
 The following snippet, added to `myocamlbuild.ml`, will use `qtest`
-to extract `foo_tests.ml` from `foo.ml` for any modulo `foo`.
+to extract `foo_tests.ml` from `foo.ml` for any module `foo`.
 
 [source,OCaml]
 ----
@@ -1037,4 +1037,62 @@ rule "qtest extract"
   (fun env build ->
    Cmd(S[A"qtest"; A"extract"; A"-o"; P(env "%_tests.ml");
          P(env "%.ml")]))
+----
+
+It is also possible to make a single `all_tests.ml` file from many modules, if
+they are listed in `all_tests.qtestpack` file (similar to `.mllib`):
+
+[source,OCaml]
+----
+open Ocamlbuild_plugin;;
+
+let import_qtestpack build packfile =
+  let tags1 = tags_of_pathname packfile in
+  let files = string_list_of_file packfile in
+  let include_dirs = Pathname.include_dirs_of (Pathname.dirname packfile) in
+  let files_alternatives =
+    List.map begin fun module_name ->
+      expand_module include_dirs module_name ["ml"; "mli"]
+    end files
+  in
+  let files = List.map Outcome.good (build files_alternatives) in
+  let tags2 =
+    List.fold_right
+      (fun file -> Tags.union (tags_of_pathname file))
+      files tags1
+  in
+  (tags2, files)
+
+let qtest_many target packfile env build =
+  let packfile = env packfile and target = env target in
+  let tags, files = import_qtestpack build packfile in
+  Cmd(S[A "qtest";
+        A "extract"; T tags;
+        A "-o"; A target; Command.atomize_paths files]);;
+
+rule "ocaml: modular qtest (qtestpack)"
+  ~prods:["%.ml"]
+  ~deps:["%.qtestpack"]
+  ~doc:"Qtest supports building a test module by extracting cases
+	directly from several composing several .ml{,i} files together.  \
+	To use that feature with ocamlbuild, you should create a .qtestpack \
+	file with the same syntax as .mllib or .mlpack files: \
+	a whitespace-separated list of the capitalized module names \
+	of the .ml{,i} files you want to combine together."
+  (qtest_many "%.ml" "%.qtestpack");
+----
+
+For instance, `run_tests.qtestpack` might contain
+
+----
+src/Foo
+src/sub/Bar
+----
+
+and the target would be
+
+[source,Sh]
+----
+ocamlbuild -use-ocamlfind -package qcheck \
+	-I src -I src/sub run_tests.native
 ----
