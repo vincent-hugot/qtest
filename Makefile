@@ -4,7 +4,7 @@ VERSION=$(shell grep Version: _oasis | awk '{ print $$2 }')
 build:
 	ocamlbuild -use-ocamlfind all.otarget
 
-TO_INSTALL=src/META $(wildcard _build/src/qcheck.*) $(wildcard _build/src/QCheck*.cmi)
+TO_INSTALL=src/META $(wildcard _build/src/qcheck.*) $(wildcard _build/src/QCheck*.cmi) $(wildcard _build/src/QCheck*.cmx)
 
 install:
 	ocamlfind install qcheck $(TO_INSTALL)
