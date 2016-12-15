@@ -625,7 +625,7 @@ module TestResult = struct
   }
 
   (* indicate failure on the given [instance] *)
-  let fail ?small ~steps:shrink_steps res instance =
+  let fail ~small ~steps:shrink_steps res instance =
     let c_ex = {instance; shrink_steps; } in
     match res.state with
     | Success -> res.state <- Failed [ c_ex ]
@@ -763,18 +763,16 @@ module Test = struct
     (* fail *)
     decr_count state;
     state.cur_max_fail <- state.cur_max_fail - 1;
-    R.fail state.res ~steps input;
+    R.fail ~small:state.test.arb.small state.res ~steps input;
     if _is_some state.test.arb.small && state.cur_max_fail > 0
     then CR_continue
     else CR_yield state.res
 
-  (* [check_state iter gen func] applies [func] repeatedly ([iter] times)
-      on output of [gen], and if [func] ever returns false, then the input that
-      caused the failure is returned in [Failed].
+  (* [check_state state] applies [state.test] repeatedly ([iter] times)
+      on output of [test.rand], and if [state.test] ever returns false,
+      then the input that caused the failure is returned in [Failed].
       If [func input] raises [FailedPrecondition] then  the input is discarded, unless
-         max_gen is 0.
-      @param max_gen max number of times [gen] is called to replace inputs
-        that fail the precondition *)
+         max_gen is 0. *)
   let rec check_state state =
     if is_done state then state.res
     else (
