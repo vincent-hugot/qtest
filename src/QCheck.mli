@@ -527,12 +527,17 @@ module Test : sig
   (** [make arb prop] builds a test that checks property [prop] on instances
       of the generator [arb].
      @param name the name of the test
-     @param max_gen maximum number of times the generation function is called
-      to replace inputs that do not satisfy preconditions
+      @param count number of test cases to run, counting only
+      the test cases which satisfy preconditions.
+      @param max_gen maximum number of times the generation function
+        is called in total to replace inputs that do not satisfy
+        preconditions (should be >= count)
      @param max_fail maximum number of failures before we stop generating
       inputs. This is useful if shrinking takes too much time.
      @param small kept for compatibility reasons; if provided, replaces
        the field [arbitrary.small].
+       If there is no shrinking function but there is a [small]
+      function, only the smallest failures will be printed.
   *)
 
   val get_arbitrary : 'a cell -> 'a arbitrary

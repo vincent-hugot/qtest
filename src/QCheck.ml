@@ -670,11 +670,11 @@ module Test = struct
   let get_arbitrary {arb; _} = arb
 
   let default_count = 100
-  let default_max_gen = 300
 
-  let make_cell ?(count=default_count) ?(max_gen=default_max_gen)
+  let make_cell ?(count=default_count) ?max_gen
   ?(max_fail=1) ?small ?name arb law
   =
+    let max_gen = match max_gen with None -> count + 200 | Some x->x in
     let arb = match small with None -> arb | Some f -> set_small f arb in
     {
       law;
