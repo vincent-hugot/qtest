@@ -789,9 +789,7 @@ module Test = struct
             CR_continue
           ) else handle_fail state input
         with
-          | FailedPrecondition ->
-            state.cur_max_gen <- state.cur_max_gen - 1;
-            CR_continue
+          | FailedPrecondition -> CR_continue
           | e -> handle_exn state input e
       in
       match res with
