@@ -241,3 +241,10 @@ let strange_string = " \"
 (*$Q & ~max_gen:1000000 ~count:1000000
     (Q.make (fun _ -> ())) (fun () -> true)
 *)
+
+(* issue #38 *)
+(*$Q & ~count:1_000_000 ~max_fail:3_000
+    (Q.make ~print:string_of_int ~small:(fun i -> i) \
+      (fun s -> Random.State.int s 1000)) \
+      (fun i -> i = i + 1)
+*)
