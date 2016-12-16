@@ -79,7 +79,7 @@ toc::[]
 
 
 [[introduction]]
-== Introduction: What Is This Thing?
+== Introduction: What Is QTest?
 
 In a nutshell, qtest is a small program which reads `.ml` and `.mli` source
 files and extracts inline unit tests from them. It is used internally by
