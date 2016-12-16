@@ -7,9 +7,10 @@ v2.2
 
 *iTeML* is an inline test extraction project, originally
 developed internally for http://batteries.forge.ocamlcore.org/[the OCaml Batteries Included library] under the
-name *qtest*. It relies on http://ounit.forge.ocamlcore.org/[oUnit] as a testing framework, though users need not know anything about it for basic usage.
-
-It has been merged with https://github.com/c-cube/qcheck[Qcheck] in 2016.
+name *qtest*.
+It relies on http://ounit.forge.ocamlcore.org/[oUnit] as a testing framework,
+though users need not know anything about it for basic usage;
+it also relies on https://github.com/c-cube/qcheck[Qcheck] for random testing.
 
 NOTE: *iTeML* stands for _Inline (Unit) Tests for OCaml_. +
   *qtest* stands for _Quick Testing_.
@@ -22,10 +23,6 @@ When major, compatibility-breaking changes are done, fully realising the project
 * qtest is available for installation as an http://opam.ocaml.org/packages/qtest/qtest.2.2/[OPAM package].
 
 * It has extensive documentation: see section "<<introduction>>" to get started.
-
-* It ships with a stand-alone library for random testing, that can be
-  used in combination with OUnit, or with its own test runner.
-  See section <<qcheck-the-library, QCheck>> for more precisions.
 
 * It has good syntax highlighting for Kate (KatePart: KWrite, KDevelop, Konqueror,...)
 and basic support for Emacs. See the https://github.com/vincent-hugot/iTeML/tree/master/editor_support[editor_support] directory
@@ -61,7 +58,7 @@ and qtest2 currently covers most of the needs of the Batteries project.
    of new features. Syntax changes a bit.  (=qtest2)
  * Oct 21, 2012: qtest2 moves to its own repository.
  * Sept. 2015: Simon Cruanes contributes a significant improvement of the random generation process.
- * March. 2016: Simon Cruanes merges `qcheck` into `qtest`
+ * March. 2016: Simon Cruanes integrates `qcheck` with `qtest`
 
 Over time, the various versions of qtest have
 received https://github.com/vincent-hugot/iTeML/graphs/contributors[contributions] by:
@@ -92,19 +89,6 @@ depend on it and can be compiled and used independently.
 
 Browse its code in the
 https://github.com/ocaml-batteries-team/batteries-included/tree/master/qtest[Github Repository].
-
-[[qcheck-the-library]]
-== QCheck: the random-testing library
-
-QTest now contains a library called `qcheck`,  inspired from Haskell's
-quickcheck. It replaces the previous `QTest2Lib` and provides a richer
-interface for building random generators, writing tests and running them.
-
-The *API documentation* can be found http://cedeela.fr/~simon/software/qcheck[here].
-
-NOTE: There is http://cedeela.fr/quickcheck-for-ocaml.html[a blog post]
-that explains some design choices of an *old* version of qcheck. Please refer
-to the API documentation for up-to-date documentation.
 
 [[using-a-quick-simple-example]]
 == Using qtest: a Quick, Simple Example
