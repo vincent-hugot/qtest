@@ -357,6 +357,9 @@ Size-directed generators::
 have `*_of_size` variants that take the size of the structure as their
 first argument.
 
+See the https://c-cube.github.io/qcheck/[online documentation of QCheck]
+for more details.
+
 *Tips:*
 
 Duplicate Elements in Lists::
