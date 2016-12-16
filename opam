@@ -32,5 +32,5 @@ tags: [
   "property"
   "quickcheck"
 ]
-conflicts: ["qcheck"]
+conflicts: ["qcheck" { < "0.5" } ]
 available: [ocaml-version >= "4.00.0"]
