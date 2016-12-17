@@ -18,7 +18,6 @@ install: [
   [ make "BIN=%{bin}%" "install" ]
 ]
 remove: [
-  ["ocamlfind" "remove" "qcheck"]
   ["rm" "%{bin}%/qtest"]
 ]
 depends: [
