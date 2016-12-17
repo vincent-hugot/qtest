@@ -5,5 +5,4 @@
 # unescaped end-of-line
 <src/qtest.ml*>: warn(-29)
 <src/*.ml*>: package(bytes)
-<src/QCheck*.*>: package(oUnit), package(unix)
-<tests/*>: package(oUnit), package(bytes)
+<tests/*>: package(oUnit), package(bytes), package(qcheck)
