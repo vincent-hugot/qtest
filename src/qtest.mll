@@ -58,6 +58,19 @@ let uident = uppercase identchar*
 
 (** extract tests from ml file *)
 rule lexml t = parse
+  | "#" [' ' '\t']*
+        (['0'-'9']+ as line) [' ' '\t']*
+        ("\"" ([^ '\010' '\013' '\"' ] * as file) "\"")? [' ' '\t']* '\n' {
+    (* lexer directives *)
+    let file = match file with
+      | Some file -> file
+      | None -> Lexing.(lexbuf.lex_curr_p.pos_fname) in
+    Lexing.(lexbuf.lex_curr_p <-
+              {lexbuf.lex_curr_p with
+               pos_fname = file;
+               pos_lnum = int_of_string line;
+              }) }
+
   (* test pragmas *)
   (****************)
 | "(*$QR" { (* quickcheck random test, in a raw form *)
