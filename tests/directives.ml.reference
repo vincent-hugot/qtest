@@ -1,0 +1,79 @@
+let ___tests = ref []
+let ___add test = ___tests := test::!___tests
+open OUnit;;
+module Q = QCheck;;let ( ==> ) = Q.( ==> );;
+
+
+
+
+module Test__environment_0 = struct
+open Directives;;
+let _test_2 = "_id1" >::: [
+"directives.ml:4" >:: (
+#4 "directives.ml"
+let _id1 = _id1 in fun () -> OUnit.assert_bool "directives.ml:4:  _id1 true" (
+#4 "directives.ml"
+  _id1 true));
+"directives.ml:5" >:: (
+#5 "directives.ml"
+let _id1 = _id1 in fun () -> OUnit.assert_bool "directives.ml:5:  _id1 (2 = 2)" (
+#5 "directives.ml"
+  _id1 (2 = 2)));
+"directives.ml:6" >:: (
+#6 "directives.ml"
+let _id1 = _id1 in fun () -> OUnit.assert_bool "directives.ml:6:  _id1 (3 + 1 = 4)" (
+#6 "directives.ml"
+  _id1 (3 + 1 = 4)));
+];; let _ = ___add _test_2;;
+let _test_3 = "_id2" >::: [
+"another_file.ml:11" >:: (
+#11 "another_file.ml"
+let _id2 = _id2 in fun () -> OUnit.assert_bool "another_file.ml:11:  _id2 true" (
+#11 "another_file.ml"
+  _id2 true));
+];; let _ = ___add _test_3;;
+let _test_4 = "_id3" >::: [
+"with_different_lines.ml:5" >:: (
+#5 "with_different_lines.ml"
+let _id3 = _id3 in fun () -> OUnit.assert_bool "with_different_lines.ml:5:  _id3 true" (
+#5 "with_different_lines.ml"
+  _id3 true));
+"with_different_lines.ml:6" >:: (
+#6 "with_different_lines.ml"
+let _id3 = _id3 in fun () -> OUnit.assert_bool "with_different_lines.ml:6:  _id3 (5 + 1 = 6)" (
+#6 "with_different_lines.ml"
+  _id3 (5 + 1 = 6)));
+];; let _ = ___add _test_4;;
+let _test_5 = "_id4" >::: [
+"final_file.ml:23" >:: (
+#23 "final_file.ml"
+let _id4 = _id4 in fun () -> OUnit.assert_bool "final_file.ml:23:  _id4 true" (
+#23 "final_file.ml"
+  _id4 true));
+"final_file.ml:24" >:: (
+#24 "final_file.ml"
+let _id4 = _id4 in fun () -> OUnit.assert_bool "final_file.ml:24:  _id4 (1 = 1)" (
+#24 "final_file.ml"
+  _id4 (1 = 1)));
+"final_file.ml:25" >:: (
+#25 "final_file.ml"
+let _id4 = _id4 in fun () -> OUnit.assert_bool "final_file.ml:25:  _id4 true" (
+#25 "final_file.ml"
+  _id4 true));
+"final_file.ml:26" >:: (
+#26 "final_file.ml"
+let _id4 = _id4 in fun () -> OUnit.assert_bool "final_file.ml:26:  _id4 true" (
+#26 "final_file.ml"
+  _id4 true));
+"final_file.ml:27" >:: (
+#27 "final_file.ml"
+let _id4 = _id4 in fun () -> OUnit.assert_bool "final_file.ml:27:  _id4 true" (
+#27 "final_file.ml"
+  _id4 true));
+];; let _ = ___add _test_5;;
+end
+
+let _ = try
+    exit (QCheck_runner.run ("" >::: List.rev !___tests))
+    with Arg.Bad msg -> print_endline msg; exit 1
+    | Arg.Help msg -> print_endline msg; exit 0
