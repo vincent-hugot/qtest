@@ -43,7 +43,8 @@ let snippet s n =
   if String.length s <= n then s else first_chars s n ^ "..."
 let snip lex = (** Snippet of current lexer buffer context *)
   let curr = max 0 (lex.Lexing.lex_start_pos - 5) in
-  let vicinity = string_after lex.Lexing.lex_buffer curr
+  let content = Bytes.to_string lex.Lexing.lex_buffer in
+  let vicinity = string_after content curr
   in snippet vicinity 70
 (*****************)
 
