@@ -22,6 +22,7 @@ remove: [
 ]
 depends: [
   "ocamlfind"
+  "base-bytes"
   "ounit" { >= "2.0.0" }
   "ocamlbuild" {build}
   "qcheck" { >= "0.5" }
