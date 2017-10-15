@@ -236,9 +236,9 @@ let generate paths =
   suite := List.rev !suite; (* correct order (suite is built in reverse order) *)
   if !_shuffle then Shuffle.exec suite;
   listiteri process (preprocess !suite);
-  out "let _ = try
-    exit (QCheck_runner.run (\"\" >::: List.rev !___tests))
-    with Arg.Bad msg -> print_endline msg; exit 1
+  out "let _ = try\n\
+    exit (QCheck_runner.run (\"\" >::: List.rev !___tests))\n\
+    with Arg.Bad msg -> print_endline msg; exit 1\n\
     | Arg.Help msg -> print_endline msg; exit 0";
   eps "Done.\n"
 
