@@ -4,5 +4,5 @@
 <**/*.ml*>: warn_A, warn(-4), warn(-44), warn(-50), safe_string
 # unescaped end-of-line
 <src/qtest.ml*>: warn(-29)
-<src/*.ml*>: package(bytes)
+<src/*>: package(bytes)
 <tests/*>: package(oUnit), package(bytes), package(qcheck)
