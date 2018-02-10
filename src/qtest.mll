@@ -144,6 +144,7 @@ and lexcomment n  = parse
 (** ... and strings *)
 and lexstring = parse
 | "\\\"" { lexstring lexbuf }
+| "\\\\" { lexstring lexbuf }
 | "\""   { }
 | _      { lexstring lexbuf }
 | eof    { epf "Warning: unterminated string" }
