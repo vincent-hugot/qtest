@@ -6,11 +6,11 @@ authors: [
   "Vincent Hugot <vincent.hugot@gmail.com>"
   "Simon Cruanes <simon.cruanes.2007@m4x.org"
 ]
-homepage: "https://github.com/vincent-hugot/iTeML"
-bug-reports: "https://github.com/vincent-hugot/iTeML/issues"
+homepage: "https://github.com/vincent-hugot/qtest"
+bug-reports: "https://github.com/vincent-hugot/qtest/issues"
 doc:
-  "https://github.com/vincent-hugot/iTeML/blob/master/README.adoc#introduction"
-dev-repo: "git@github.com:vincent-hugot/iTeML.git"
+  "https://github.com/vincent-hugot/qtest/blob/master/README.adoc#introduction"
+dev-repo: "git@github.com:vincent-hugot/qtest.git"
 build: [
   [ make "build" ]
 ]

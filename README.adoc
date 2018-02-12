@@ -1,23 +1,18 @@
-= iTeML / qtest v2.2.0
+= qtest
 v2.2
 :toc: macro
 :toclevels: 4
 :source-highlighter: pygments
 
 
-*iTeML* is an inline test extraction project, originally
+*qtest* is an inline test extraction project, originally
 developed internally for http://batteries.forge.ocamlcore.org/[the OCaml Batteries Included library] under the
 name *qtest*.
 It relies on http://ounit.forge.ocamlcore.org/[oUnit] as a testing framework,
 though users need not know anything about it for basic usage;
 it also relies on https://github.com/c-cube/qcheck[Qcheck] for random testing.
 
-NOTE: *iTeML* stands for _Inline (Unit) Tests for OCaml_. +
-  *qtest* stands for _Quick Testing_.
-
-The name *qtest* still refers to the current _implementation_ of iTeML, which is stable and
-feature-complete. 
-When major, compatibility-breaking changes are done, fully realising the project, the new utility will be called *iTeML*.
+NOTE: *qtest* stands for _Quick Testing_.
 
 
 * qtest is available for installation as an http://opam.ocaml.org/packages/qtest/qtest.2.2/[OPAM package].
@@ -25,7 +20,7 @@ When major, compatibility-breaking changes are done, fully realising the project
 * It has extensive documentation: see section "<<introduction>>" to get started.
 
 * It has good syntax highlighting for Kate (KatePart: KWrite, KDevelop, Konqueror,...)
-and basic support for Emacs. See the https://github.com/vincent-hugot/iTeML/tree/master/editor_support[editor_support] directory
+and basic support for Emacs. See the https://github.com/vincent-hugot/qtest/tree/master/editor_support[editor_support] directory
 
 
 *Manual installation:*
@@ -40,10 +35,10 @@ To use a custom installation prefix, use
 *Future works:*
 
 There are ideas floating around on how to improve qtest2, generally revolving
-around going from a test "extraction" to an "annotation" model. The new, compatibility-breaking version
-would be called _iteml_, and can be thought of as _qtest3_.
+around going from a test "extraction" to an "annotation" model.
 No timetable is set yet, as all parties involved are busy bees, 
-and qtest2 currently covers most of the needs of the Batteries project.
+and qtest2 currently covers most of the needs of the Batteries project
+and others.
 
 
 *History of the project:*
@@ -59,15 +54,17 @@ and qtest2 currently covers most of the needs of the Batteries project.
  * Oct 21, 2012: qtest2 moves to its own repository.
  * Sept. 2015: Simon Cruanes contributes a significant improvement of the random generation process.
  * March. 2016: Simon Cruanes integrates `qcheck` with `qtest`
+ * Dec. 2016: `qcheck` and `qtest` are split apart again
+ * Feb. 2018: renaming the repository to `qtest` again
 
 Over time, the various versions of qtest have
-received https://github.com/vincent-hugot/iTeML/graphs/contributors[contributions] by:
+received https://github.com/vincent-hugot/qtest/graphs/contributors[contributions] by:
 Eric Norige, Gabriel Scherer, Cedric Cellier, Valentin Gatien-Baron, Max Mouratov,
 and Simon Cruanes.
 
 *Contact:*
 
-The preferred way is to create a https://github.com/vincent-hugot/iTeML/issues/new[new issue] on GitHub.
+The preferred way is to create a https://github.com/vincent-hugot/qtest/issues/new[new issue] on GitHub.
 
 Current maintainer: https://github.com/c-cube[Simon Cruanes].
 
