@@ -2,11 +2,22 @@
 (jbuild_version 1)
 
 (executable
-  ((name qtest)
+  ((name qtest_bin)
    (public_name qtest)
    (libraries (bytes))
    (flags (:standard -w +a-4-29-44-50@8 -safe-string))))
 
-(ocamllex (qtest misclex))
+(ocamllex (qtest_bin misclex))
 
 (ocamlyacc (qparse))
+
+(library
+  ((public_name qtest.lib)
+   (name qtestlib)
+   (modules ())
+   (inline_tests.backend
+     ((generate_runner
+        (run qtest ${impl-files} ${intf-files} -o "qtest_${library-name}.ml"))
+      (runner_libraries (qcheck oUnit bytes))
+      ))
+   ))
