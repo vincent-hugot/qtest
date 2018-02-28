@@ -1,17 +1,14 @@
 
 build:
-	ocamlbuild -use-ocamlfind all.otarget
-
-install:
-	cp qtest.native $(BIN)/qtest
+	jbuilder build @install
 
 clean:
-	ocamlbuild -clean
+	jbuilder clean
 
-uninstall:
-	rm $(BIN)/qtest
+doc:
+	jbuider doc
 
-doc: build
-	@echo see readme
-
-.PHONY: tags update_next_tag
+test: build
+	cd tests && ./testfoo.sh || true
+	cd tests && ./testcppo.sh || true
+	cd tests && ./testdirectives.sh || true

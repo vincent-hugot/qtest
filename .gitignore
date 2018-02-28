@@ -11,7 +11,7 @@
 qtest
 qtest.ml
 *.native
-setup.data
-setup.log
 _build
 tests/footest.ml
+.merlin
+*.install

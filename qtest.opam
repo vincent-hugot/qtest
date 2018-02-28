@@ -1,5 +1,5 @@
 opam-version: "1.2"
-maintainer: "Vincent Hugot <vincent.hugot@gmail.com>"
+maintainer: "Simon Cruanes <simon.cruanes.2007@m4x.org"
 name: "qtest"
 version: "2.8"
 authors: [
@@ -12,19 +12,12 @@ doc:
   "https://github.com/vincent-hugot/qtest/blob/master/README.adoc#introduction"
 dev-repo: "git@github.com:vincent-hugot/qtest.git"
 build: [
-  [ make "build" ]
-]
-install: [
-  [ make "BIN=%{bin}%" "install" ]
-]
-remove: [
-  ["rm" "%{bin}%/qtest"]
+  [ "jbuilder" "build" "-j" jobs "-p" name ]
 ]
 depends: [
-  "ocamlfind"
   "base-bytes"
   "ounit" { >= "2.0.0" }
-  "ocamlbuild" {build}
+  "jbuilder" {build}
   "qcheck" { >= "0.5" }
 ]
 tags: [
@@ -32,4 +25,4 @@ tags: [
   "property"
   "quickcheck"
 ]
-available: [ocaml-version >= "4.00.0"]
+available: [ocaml-version >= "4.02.0"]

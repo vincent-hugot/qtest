@@ -1,0 +1,12 @@
+
+(jbuild_version 1)
+
+(executable
+  ((name qtest)
+   (public_name qtest)
+   (libraries (bytes))
+   (flags (:standard -w +a-4-29-44-50@8 -safe-string))))
+
+(ocamllex (qtest misclex))
+
+(ocamlyacc (qparse))
