@@ -146,6 +146,8 @@ and lexstring = parse
 | "\\\"" { lexstring lexbuf }
 | "\\\\" { lexstring lexbuf }
 | "\""   { }
+| "\\\n" { eol lexbuf; lexstring lexbuf }
+| "\n"   { eol lexbuf; lexstring lexbuf }
 | _      { lexstring lexbuf }
 | eof    { epf "Warning: unterminated string" }
 
