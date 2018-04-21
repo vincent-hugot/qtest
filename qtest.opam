@@ -17,7 +17,7 @@ build: [
 depends: [
   "base-bytes"
   "ounit" { >= "2.0.0" }
-  "jbuilder" {build}
+  "jbuilder" {build & >= "1.0+beta19"}
   "qcheck" { >= "0.5" }
 ]
 tags: [
