@@ -237,7 +237,7 @@ let process uid = function
       | Random -> outf
         "\"%s\" >:: (%s fun () -> \
           let test = Q.Test.make ~name:%s %s %s%s in \n\
-          try Q.Test.check_exn ~rand:(QCheck_runner.random_state()) test \n\
+          try Q.Test.check_exn ~rand:(QCheck_ounit.random_state()) test \n\
           with Q.Test.Test_fail (a,b) -> OUnit.assert_failure (Q.Test.print_test_fail a b));\n"
         location bind extended_name test.header.hpar lnumdir st.code;
       | Raw -> outf
@@ -246,7 +246,7 @@ let process uid = function
       | Random_raw -> outf
         "\"%s\" >:: (%s fun () -> \
           let test = Q.Test.make ~name:%s %s %s%s in \n\
-          try Q.Test.check_exn ~rand:(QCheck_runner.random_state()) test \n\
+          try Q.Test.check_exn ~rand:(QCheck_ounit.random_state()) test \n\
           with Q.Test.Test_fail (a,b) -> OUnit.assert_failure (Q.Test.print_test_fail a b));\n"
         location bind extended_name test.header.hpar lnumdir st.code;
     in List.iter do_statement test.statements;

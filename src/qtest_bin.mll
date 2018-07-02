@@ -240,7 +240,7 @@ let generate paths =
   if !_shuffle then Shuffle.exec suite;
   listiteri process (preprocess !suite);
   out "let _ = try\n\
-    exit (QCheck_runner.run (\"\" >::: List.rev !___tests))\n\
+    exit (QCheck_ounit.run (\"\" >::: List.rev !___tests))\n\
     with Arg.Bad msg -> print_endline msg; exit 1\n\
     | Arg.Help msg -> print_endline msg; exit 0";
   eps "Done.\n"
