@@ -943,7 +943,7 @@ by `--help` if needed.
 ----
 $ qtest extract foo.ml -o footest.ml
 
-$ ocamlfind ocamlopt -package qcheck -linkpkg footest.ml -o footest
+$ ocamlfind ocamlopt -package qcheck.ounit -linkpkg footest.ml -o footest
 
 $ ./footest --help
 
@@ -1077,6 +1077,6 @@ and the target would be
 
 [source,Sh]
 ----
-ocamlbuild -use-ocamlfind -package qcheck \
+ocamlbuild -use-ocamlfind -package qcheck.ounit \
 	-I src -I src/sub run_tests.native
 ----
