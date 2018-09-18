@@ -10,6 +10,6 @@ let failing =
             (fun l -> l = List.sort compare l));;
 
 let () =
-  let open QCheck_ounit in
+  let open QCheck_runner in
   let _ = OUnit.run_test_tt_main ("tests" >::: [passing; failing]) in
   ()

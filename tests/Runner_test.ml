@@ -10,5 +10,5 @@ let failing =
             (fun l -> l = List.sort compare l));;
 
 let () =
-  let _ = QCheck_ounit.run_tests_main [passing; failing] in
+  let _ = QCheck_runner.run_tests_main [passing; failing] in
   ()

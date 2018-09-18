@@ -12,4 +12,4 @@ let failing =
 let () =
   let open OUnit2 in
   run_test_tt_main (
-      "tests" >::: QCheck_ounit.to_ounit2_test_list [passing; failing])
+      "tests" >::: QCheck_runner.to_ounit2_test_list [passing; failing])
