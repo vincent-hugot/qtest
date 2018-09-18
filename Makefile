@@ -1,12 +1,12 @@
 
 build:
-	jbuilder build @install
+	@dune build @install
 
 clean:
-	jbuilder clean
+	@dune clean
 
 doc:
-	jbuider doc
+	@dune doc
 
 test: build
 	cd tests && ./testfoo.sh || true

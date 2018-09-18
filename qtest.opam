@@ -12,13 +12,14 @@ doc:
   "https://github.com/vincent-hugot/qtest/blob/master/README.adoc#introduction"
 dev-repo: "git@github.com:vincent-hugot/qtest.git"
 build: [
-  [ "jbuilder" "build" "-j" jobs "-p" name ]
+  [ "dune" "build" "-j" jobs "-p" name ]
 ]
 depends: [
   "base-bytes"
   "ounit" { >= "2.0.0" }
-  "jbuilder" {build & >= "1.0+beta19"}
+  "dune" {build}
   "qcheck" { >= "0.5" }
+  "odoc" {doc}
 ]
 tags: [
   "test"
