@@ -1,4 +1,9 @@
 %{
+(*
+ * qTest: quick unit tests: extract oUnit tests from OCaml components
+ * under GNU GPL v3: see qtest.mll
+ *)
+
 open Core
 %}
 

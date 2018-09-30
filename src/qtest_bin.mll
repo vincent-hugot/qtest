@@ -4,8 +4,9 @@
  *
  *
  * Copyright 2012 Vincent Hugot and the "OCaml Batteries Included" team
+ * Copyright 2018 Simon Cruanes
  *
- *  vhugot.com ; batteries.forge.ocamlcore.org
+ *  https://github.com/vincent-hugot/qtest
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
