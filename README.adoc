@@ -1006,6 +1006,45 @@ type foo = { a : int; b : string }
 here, the test can use a custom printer defined above (and it needs it,
 for it will fail badly).
 
+=== Using qtest with dune
+
+The simplest way is to use `(inline_tests (backend qtest.lib))` in a `library`
+statement:
+
+[source]
+----
+(library
+  (name foo)
+  (inline_tests (backend qtest.lib)))
+----
+
+And then `dune runtest` should automatically find inline tests in the
+library's modules.
+
+For better control, a rule can be used (adapt to fit your needs):
+
+----
+(rule
+  (targets run_qtest.ml)
+  (deps (source_tree src))
+  ; here is where you need to tell qtest what files to consider
+  (action (run qtest extract src/foo1.ml src/foo2.ml > %{targets})))
+
+(executable
+  (name run_qtest)
+  (modules run_qtest)
+  ; disable some warnings in qtests
+  (flags :standard -warn-error -a -w -33-35-27-39)
+  (libraries qcheck))
+
+(alias
+  (name    runtest)
+  (deps    run_qtest.exe)
+  (action  (run %{deps})))
+
+----
+
+
 === Using qtest with OCamlbuild
 
 The following snippet, added to `myocamlbuild.ml`, will use `qtest`
