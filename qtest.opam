@@ -19,7 +19,6 @@ depends: [
   "ounit" { >= "2.0.0" }
   "dune" {build}
   "qcheck" { >= "0.5" }
-  "odoc" {doc}
 ]
 tags: [
   "test"
