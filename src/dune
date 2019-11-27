@@ -14,5 +14,5 @@
   (name qtestlib)
   (modules)
   (inline_tests.backend
-    (generate_runner (run qtest extract ${impl-files} ${intf-files}))
+    (generate_runner (run qtest extract %{impl-files} %{intf-files}))
     (runner_libraries qcheck oUnit bytes)))
