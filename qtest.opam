@@ -17,7 +17,7 @@ build: [
 depends: [
   "base-bytes"
   "ounit" { >= "2.0.0" }
-  "dune" { >= "1.1" & < "2.0" }
+  "dune" { >= "1.1" }
   "qcheck" { >= "0.5" }
   "ocaml" { >= "4.02.0" }
 ]
