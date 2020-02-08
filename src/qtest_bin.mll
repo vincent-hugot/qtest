@@ -222,7 +222,7 @@ let extract_from pathin = Lexing.(
     let fn_base = basename pathin in
     if not (check_suffix fn_base ".ml" || check_suffix fn_base ".mli") then
       (Printf.eprintf "File %S is not a ML module!\n%!" pathin ; exit 2);
-    String.capitalize (chop_extension fn_base)
+    String.capitalize_ascii (chop_extension fn_base)
   ) in
   (* adding the file's pragmas to the suite *)
   register Env_begin; register (Open mod_name);
