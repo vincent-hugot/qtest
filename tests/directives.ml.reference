@@ -74,6 +74,6 @@ let _id4 = _id4 in fun () -> OUnit.assert_bool "final_file.ml:27:  _id4 true" (
 end
 
 let _ = try
-    exit (QCheck_runner.run ("" >::: List.rev !___tests))
-    with Arg.Bad msg -> print_endline msg; exit 1
-    | Arg.Help msg -> print_endline msg; exit 0
+exit (QCheck_ounit.run ("" >::: List.rev !___tests))
+with Arg.Bad msg -> print_endline msg; exit 1
+| Arg.Help msg -> print_endline msg; exit 0
