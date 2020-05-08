@@ -211,7 +211,7 @@ and lexmodules = parse
 
 (** register all the tests in source file, and register them in the suite *)
 let extract_from pathin = Lexing.(
-  epf "`%s' %!" pathin;
+  if not !quiet then epf "`%s' %!" pathin;
   let chanin = open_in pathin in
   let lexbuf = from_channel chanin in
   lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with
@@ -256,7 +256,8 @@ let add_preamble_file path =
   Buffer.add_channel global_preamble input (in_channel_length input);
   close_in input
 let set_output path =
-  epf "Target file: `%s'. " path; outc := open_out path
+  if not !quiet then epf "Target file: `%s'. " path;
+  outc := open_out path
 
 let options = Arg.align [
 "-o",               Arg.String set_output, " ";
