@@ -233,7 +233,7 @@ let extract_from pathin = Lexing.(
 
 (** Generate the test suite from files list on currently selected output *)
 let generate paths =
-  eps "Extraction : "; List.iter extract_from paths;
+  if not !quiet then eps "Extraction : "; List.iter extract_from paths;
   out "let ___tests = ref []\nlet ___add test = ___tests := test::!___tests\n";
   out hard_coded_preamble;
   out (Buffer.contents global_preamble);
@@ -244,7 +244,7 @@ let generate paths =
     exit (QCheck_ounit.run (\"\" >::: List.rev !___tests))\n\
     with Arg.Bad msg -> print_endline msg; exit 1\n\
     | Arg.Help msg -> print_endline msg; exit 0";
-  eps "Done.\n"
+  if not !quiet then eps "Done.\n"
 
 (** Parse command line *)
 
@@ -284,6 +284,10 @@ Only generate tests pertaining to this function, as indicated by the test header
 "--shuffle",        Arg.Unit (fun ()->toggle _shuffle; if !_shuffle then epf "!!! SHUFFLE is ON !!!\n"),
 " (default: turned off) \
 Toggle test execution order randomisation; submodules using injection are not shuffled";
+
+"--quiet",          Arg.Set quiet,
+" (default: turned off) \
+Suppress output on stderr";
 ]
 
 let usage_msg =

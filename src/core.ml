@@ -5,6 +5,7 @@
 
 (**** TOOLKIT ****)
 module M = Misclex
+let quiet = ref false
 let fpf = Printf.fprintf let va  = Printf.sprintf
 let epf = Printf.eprintf let eps  = prerr_string
 let pl  = print_endline
