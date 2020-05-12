@@ -3,7 +3,7 @@
   (name qtest_bin)
   (public_name qtest)
   (libraries bytes)
-  (flags :standard -w +a-4-29-44-50@8 -warn-error -a -safe-string))
+  (flags :standard -w +a-4-29-44-50@8 -warn-error -a+8 -safe-string))
 
 (ocamllex (modules qtest_bin misclex))
 
@@ -14,5 +14,5 @@
   (name qtestlib)
   (modules)
   (inline_tests.backend
-    (generate_runner (run qtest extract %{impl-files} %{intf-files}))
+    (generate_runner (run qtest extract --quiet %{impl-files} %{intf-files}))
     (runner_libraries qcheck oUnit bytes)))
