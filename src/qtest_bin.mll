@@ -104,9 +104,9 @@ rule lexml t = parse
   and glo_register m = register @@ Open m
   in List.iter glo_register modules }
 | "(*${*)" | "(*$begin:inject*)" (* copy injection *)
-  { lexinjectcp buffy lexbuf }
+  { lexinjectcp (info lexbuf) buffy lexbuf }
 | "(*$inject" (* pure injection *)
-  { lexinjectmv buffy lexbuf }
+  { lexinjectmv (info lexbuf) buffy lexbuf }
   (* error cases *)
   (***************)
 | "(*$" { raise @@ Invalid_pragma (snip lexbuf) }
@@ -162,23 +162,23 @@ and lexbody_raw ln b = parse
   let s = B.contents b in B.clear b; [{ln; code=s}]}
 
 (** body of an injection pragma: copy *)
-and lexinjectcp b = parse
+and lexinjectcp info b = parse
 | _ as c {
   if c = '\n' then eol lexbuf;
-  B.add_char b c; lexinjectcp b lexbuf }
+  B.add_char b c; lexinjectcp info b lexbuf }
 | "(*$}*)" | "(*$end:inject*)" {
    let code = B.contents b in B.clear b;
-   register @@ Inject (info lexbuf,code) }
+   register @@ Inject (info,code) }
 
 (* TODO: eliminate comments *)
 (** body of an injection pragma: move *)
-and lexinjectmv b = parse
+and lexinjectmv info b = parse
 | _ as c {
   if c = '\n' then eol lexbuf;
-  B.add_char b c; lexinjectmv b lexbuf }
+  B.add_char b c; lexinjectmv info b lexbuf }
 | "*)" { (* note: the 2 spaces are for column numbers reporting *)
    let code = "  " ^ B.contents b in B.clear b;
-   register @@ Inject (info lexbuf,code) }
+   register @@ Inject (info,code) }
 
 
 (** prepare to parse test header *)
