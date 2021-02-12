@@ -1,6 +1,6 @@
 opam-version: "2.0"
 maintainer: "Simon Cruanes <simon.cruanes.2007@m4x.org"
-version: "2.11.1"
+version: "2.11.2"
 authors: [
   "Vincent Hugot <vincent.hugot@gmail.com>"
   "Simon Cruanes <simon.cruanes.2007@m4x.org"
