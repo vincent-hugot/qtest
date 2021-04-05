@@ -230,10 +230,12 @@ let extract_from pathin = Lexing.(
   close_in chanin
 )
 
+let _keep_warn_error = ref false
 
 (** Generate the test suite from files list on currently selected output *)
 let generate paths =
   if not !quiet then eps "Extraction : "; List.iter extract_from paths;
+  if not !_keep_warn_error then out "[@@@ocaml.warnerror \"-a\"]\n";
   out "let ___tests = ref []\nlet ___add test = ___tests := test::!___tests\n";
   out hard_coded_preamble;
   out (Buffer.contents global_preamble);
@@ -276,6 +278,9 @@ Add code to the tests preamble; typically this will be an instruction of the for
 " <path> \
 Add the contents of the given file to the tests preamble\n\
 ";
+
+"--keep-warn-error", Arg.Set _keep_warn_error,
+" <bool> keep/disable warn-error in the generated code";
 
 "--run-only",       Arg.String (fun s->Core._run_only := Some s),
 " <function name> \
